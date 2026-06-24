@@ -2,5 +2,9 @@
 *.tmp
 *.log
 node_modules/
+.next/
+out/
+public/archive/
+tsconfig.tsbuildinfo
 .env
 .env.*
