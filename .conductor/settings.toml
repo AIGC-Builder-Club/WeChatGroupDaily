@@ -1,0 +1,7 @@
+#:schema https://conductor.build/schemas/settings.repo.schema.json
+
+[scripts]
+setup = "pnpm install"
+run = "PORT=${CONDUCTOR_PORT:-3000} pnpm dev"
+archive = "pnpm archive:check"
+run_mode = "concurrent"
