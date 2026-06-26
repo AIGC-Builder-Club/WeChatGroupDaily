@@ -92,13 +92,16 @@ describe("archive calendar UI layout contract", () => {
 
   it("uses compact event times and one-line month cards", () => {
     const timelineEventCard = getFunctionSource("TimelineEventCard");
+    const timelineView = getFunctionSource("TimelineView");
     const eventPill = getFunctionSource("EventPill");
     const formatTimelineEventTime = getFunctionSource("formatTimelineEventTime");
     const formatMonthEventTime = getFunctionSource("formatMonthEventTime");
     const compactEventStyles = getStyleBlock(".compactEvent");
     const monthEventTimeStyles = getStyleBlock(".monthEventTime");
 
-    expect(timelineEventCard).toContain("formatTimelineEventTime(event)");
+    expect(timelineView).toContain("view={view}");
+    expect(timelineEventCard).toContain("view: \"week\" | \"day\"");
+    expect(timelineEventCard).toContain("formatTimelineEventTime(event, view)");
     expect(timelineEventCard).toContain("event.title");
     expect(timelineEventCard).not.toContain("timelineStoryNo");
     expect(eventPill).toContain("formatTimelineEventTime(event)");
@@ -108,6 +111,8 @@ describe("archive calendar UI layout contract", () => {
     expect(eventPill).toContain("styles.monthEventTime");
     expect(eventPill).not.toContain("styles.monthEventTitle");
     expect(eventPill).toContain("compact ? styles.compactEvent : \"\"");
+    expect(formatTimelineEventTime).toContain('view === "week"');
+    expect(formatTimelineEventTime).toContain("formatMonthEventTime(event)");
     expect(formatTimelineEventTime).toContain("formatArchiveEventTime(event)");
     expect(formatMonthEventTime).toContain("minutes === 0");
     expect(formatMonthEventTime).toContain('format(event.start, "h a")');
@@ -257,6 +262,20 @@ describe("archive calendar UI layout contract", () => {
     expect(verticalScroll).not.toContain("scrollEndTimer");
     expect(monthGrid).toContain("overflow: hidden");
     expect(monthGridContent).toContain("grid-template-columns: repeat(7, minmax(0, 1fr))");
+  });
+
+  it("sizes buffered month rows from the container before measurement", () => {
+    const monthView = getFunctionSource("MonthView");
+
+    expect(calendarSource).not.toContain("monthInitialRowHeight");
+    expect(monthView).toContain("const [measuredRowHeight, setMeasuredRowHeight] = useState(0)");
+    expect(monthView).toContain("const monthGridHeightPercent = (bufferedRows.length / monthVisibleRowCount) * 100");
+    expect(monthView).toContain("const bufferedRowOffsetPercent = (dynamicBuffer / bufferedRows.length) * 100");
+    expect(monthView).toContain("height: `${monthGridHeightPercent}%`");
+    expect(monthView).toContain("gridTemplateRows: `repeat(${bufferedRows.length}, minmax(0, 1fr))`");
+    expect(monthView).toContain("translateY(calc(-${bufferedRowOffsetPercent}% ${scrollOffsetOperator} ${Math.abs(scrollOffset)}px))");
+    expect(monthView).not.toContain("gridTemplateRows: `repeat(${bufferedRows.length}, ${monthRowHeight}px)`");
+    expect(monthView).not.toContain("rowHeight || 94");
   });
 
   it("shows only three month events before the expandable overflow affordance", () => {
