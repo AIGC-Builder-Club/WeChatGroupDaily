@@ -12,9 +12,15 @@ function getFunctionSource(name: string): string {
   return calendarSource.slice(start, nextFunction === -1 ? undefined : nextFunction);
 }
 
-function getStyleBlock(selector: string): string {
-  const start = calendarStyles.indexOf(`${selector} {`);
-  expect(start).toBeGreaterThanOrEqual(0);
+function getStyleBlock(selector: string, occurrence = 0): string {
+  let start = -1;
+  let fromIndex = 0;
+
+  for (let index = 0; index <= occurrence; index += 1) {
+    start = calendarStyles.indexOf(`${selector} {`, fromIndex);
+    expect(start).toBeGreaterThanOrEqual(0);
+    fromIndex = start + 1;
+  }
 
   const end = calendarStyles.indexOf("\n}", start);
   expect(end).toBeGreaterThanOrEqual(0);
@@ -193,6 +199,8 @@ describe("archive calendar UI layout contract", () => {
     const appShell = getStyleBlock(".appShell");
     const calendarPane = getStyleBlock(".calendarPane");
     const calendarSurface = getStyleBlock(".calendarSurface");
+    const weekdayRow = getStyleBlock(".weekdayRow", 1);
+    const monthCell = getStyleBlock(".monthCell");
     const timelineView = getStyleBlock(".timelineView");
 
     expect(appShell).toContain("height: 100dvh");
@@ -201,6 +209,9 @@ describe("archive calendar UI layout contract", () => {
     expect(calendarPane).toContain("min-height: 0");
     expect(calendarSurface).toContain("height: 100%");
     expect(calendarSurface).toContain("min-height: 0");
+    expect(weekdayRow).toContain("border-bottom: 1px solid var(--calendar-grid-border)");
+    expect(monthCell).toContain("border-right: 1px solid var(--calendar-grid-border)");
+    expect(monthCell).toContain("border-bottom: 1px solid var(--calendar-grid-border)");
     expect(timelineView).toContain("height: 100%");
     expect(timelineView).toContain("overflow: auto");
   });
@@ -395,6 +406,22 @@ describe("archive calendar UI layout contract", () => {
     expect(selectEvent).toContain("setSelectedEventId(event.id)");
     expect(selectEvent).toContain("setRightOpen(true)");
     expect(selectEvent).not.toContain("setCurrentDate");
+  });
+
+  it("clears the selected event when clicking blank calendar space", () => {
+    const appSource = getFunctionSource("ArchiveCalendar");
+    const clearSelectionStart = appSource.indexOf("const clearSelectedEvent = useCallback");
+    expect(clearSelectionStart).toBeGreaterThanOrEqual(0);
+
+    const clearSelection = appSource.slice(
+      clearSelectionStart,
+      appSource.indexOf("const handleQueryChange", clearSelectionStart),
+    );
+
+    expect(clearSelection).toContain("target?.closest");
+    expect(clearSelection).toContain("button, a, input, textarea, select");
+    expect(clearSelection).toContain("setSelectedEventId(null)");
+    expect(appSource).toContain("onClick={clearSelectedEvent}");
   });
 
   it("defaults the detail panel selection to the first event in the current view", () => {

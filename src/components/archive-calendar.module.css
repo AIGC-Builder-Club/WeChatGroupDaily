@@ -411,7 +411,6 @@
   align-items: center;
   min-height: 56px;
   padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
   background: var(--background);
 }
 
@@ -610,18 +609,13 @@
 
 .weekdayRow {
   height: 32px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--calendar-grid-border);
   background: var(--background);
 }
 
 .weekdayRow span {
   display: grid;
   place-items: center;
-  border-right: 1px solid var(--border);
-}
-
-.weekdayRow span:last-child {
-  border-right: 0;
 }
 
 .monthGrid {
@@ -642,8 +636,8 @@
   min-width: 0;
   overflow: hidden;
   padding: 7px;
-  border-right: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--calendar-grid-border);
+  border-bottom: 1px solid var(--calendar-grid-border);
   background: var(--background);
 }
 
@@ -855,8 +849,8 @@
   justify-content: flex-end;
   min-height: 48px;
   padding: 10px 8px;
-  border-right: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--calendar-grid-border);
+  border-bottom: 1px solid var(--calendar-grid-border);
   background: var(--background);
   color: var(--muted-foreground);
   font-size: 0.68rem;
@@ -869,14 +863,14 @@
   z-index: 3;
   display: grid;
   min-width: 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--calendar-grid-border);
   background: var(--background);
   will-change: transform;
 }
 
 .timelineDayHeaderGroup {
   min-width: 0;
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--calendar-grid-border);
   background: var(--background);
 }
 
@@ -892,7 +886,7 @@
   min-height: 48px;
   padding: 10px;
   border: 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--calendar-grid-border);
   background: var(--background);
   color: var(--foreground);
   text-align: left;
@@ -925,7 +919,7 @@
   display: grid;
   grid-template-rows: repeat(24, var(--timeline-hour-height));
   height: calc(24 * var(--timeline-hour-height));
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--calendar-grid-border);
   background: var(--background);
 }
 
@@ -953,7 +947,7 @@
   position: relative;
   min-width: 0;
   height: calc(24 * var(--timeline-hour-height));
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--calendar-grid-border);
   background: var(--background);
 }
 
@@ -980,7 +974,7 @@
 
 .timelineHourLine {
   height: var(--timeline-hour-height);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--calendar-grid-border);
 }
 
 .timelineEventCard {
@@ -1058,12 +1052,11 @@
   min-width: 0;
   min-height: 56px;
   padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
 }
 
 .detailHeader span {
   color: var(--muted-foreground);
-  font-size: 0.78rem;
+  font-size: 0.68rem;
 }
 
 .detailScroll {

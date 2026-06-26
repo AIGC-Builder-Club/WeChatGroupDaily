@@ -128,6 +128,18 @@ describe("archive calendar view defaults", () => {
       }),
     ).toBe("today-first");
   });
+
+  it("keeps an explicitly cleared selection empty instead of falling back to the default event", () => {
+    const events = [makeEvent("today-first", new Date(2026, 5, 26, 9, 56))];
+
+    expect(
+      getResolvedSelectedEventId({
+        defaultSelectedEventId: "today-first",
+        events,
+        selectedEventId: null,
+      }),
+    ).toBeNull();
+  });
 });
 
 function makeEvent(id: string, start: Date): ArchiveCalendarEvent {

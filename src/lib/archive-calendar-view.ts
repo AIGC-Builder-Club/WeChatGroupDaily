@@ -65,6 +65,10 @@ export function getResolvedSelectedEventId({
   events,
   selectedEventId,
 }: ResolvedSelectedEventIdArgs): string | null {
+  if (selectedEventId === null) {
+    return null;
+  }
+
   if (selectedEventId && events.some((event) => event.id === selectedEventId)) {
     return selectedEventId;
   }
