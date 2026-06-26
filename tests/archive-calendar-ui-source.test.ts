@@ -279,7 +279,8 @@ describe("archive calendar UI layout contract", () => {
     expect(todayMiniDay).toContain("background: var(--primary)");
   });
 
-  it("opens the corresponding day view when clicking a month date number", () => {
+  it("shows the full day event list in the right sidebar when clicking a month date number", () => {
+    const appSource = getFunctionSource("ArchiveCalendar");
     const monthView = getFunctionSource("MonthView");
     const dayNumberStart = monthView.indexOf("styles.dayNumber");
     expect(dayNumberStart).toBeGreaterThanOrEqual(0);
@@ -289,8 +290,22 @@ describe("archive calendar UI layout contract", () => {
       monthView.indexOf("</button>", dayNumberStart),
     );
 
-    expect(dayNumberButton).toContain("onOpenDay(day)");
-    expect(dayNumberButton).not.toContain("onDateSelect(day)");
+    const selectDayEventsStart = appSource.indexOf("const selectDayEvents = useCallback");
+    expect(selectDayEventsStart).toBeGreaterThanOrEqual(0);
+
+    const selectDayEvents = appSource.slice(
+      selectDayEventsStart,
+      appSource.indexOf("const goToToday", selectDayEventsStart),
+    );
+
+    expect(selectDayEvents).toContain("setSelectedDayDate(startOfDay(date))");
+    expect(selectDayEvents).toContain("setSelectedEventId(null)");
+    expect(selectDayEvents).toContain("setRightOpen(true)");
+    expect(selectDayEvents).not.toContain("setCurrentDate");
+    expect(selectDayEvents).not.toContain('setView("day")');
+    expect(appSource).toContain("onOpenDayEvents={selectDayEvents}");
+    expect(dayNumberButton).toContain("onOpenDayEvents(day)");
+    expect(dayNumberButton).not.toContain("onOpenDay(day)");
   });
 
   it("drives month scrolling through free wheel offsets and buffered week rows", () => {
@@ -334,16 +349,33 @@ describe("archive calendar UI layout contract", () => {
     const monthEvents = getStyleBlock(".monthEvents");
     const moreEvents = getStyleBlock(".moreEvents");
 
-    expect(appSource).toContain("const openDayView = useCallback");
-    expect(appSource).toContain("setCurrentDate(date)");
-    expect(appSource).toContain('setView("day")');
-    expect(appSource).toContain("onOpenDay={openDayView}");
+    expect(appSource).toContain("const selectDayEvents = useCallback");
+    expect(appSource).toContain("setSelectedDayDate(startOfDay(date))");
+    expect(appSource).toContain("onOpenDayEvents={selectDayEvents}");
     expect(monthView).toContain("dayEvents.slice(0, 3)");
     expect(monthView).toContain("dayEvents.length > 3");
-    expect(monthView).toContain("onOpenDay(day)");
+    expect(monthView).toContain("onOpenDayEvents(day)");
     expect(monthEvents).toContain("display: grid");
     expect(moreEvents).toContain("cursor: pointer");
     expect(moreEvents).toContain("font-weight: 700");
+  });
+
+  it("renders day-list details with the full report action pinned below the scroll area", () => {
+    const detailPanel = getFunctionSource("DetailPanel");
+    const detailPanelStyles = getStyleBlock(".detailPanel");
+    const detailDayEvents = getStyleBlock(".detailDayEvents");
+
+    expect(detailPanel).toContain("dayEvents");
+    expect(detailPanel).toContain("const fullReportHref = dayEvents[0]?.meta.rawHtmlHref");
+    expect(detailPanel).toContain("styles.detailDayEvents");
+    expect(detailPanel).toContain("dayEvents.map((dayEvent)");
+    expect(detailPanel).toContain("onSelectEvent(dayEvent)");
+    expect(detailPanel).toContain("打开完整日报");
+    expect(detailPanel.indexOf("className={styles.detailScroll}")).toBeLessThan(
+      detailPanel.indexOf("className={styles.rawLink}"),
+    );
+    expect(detailPanelStyles).toContain("grid-template-rows: auto minmax(0, 1fr) auto");
+    expect(detailDayEvents).toContain("display: grid");
   });
 
   it("renders month events with the same card vocabulary as week and day events", () => {

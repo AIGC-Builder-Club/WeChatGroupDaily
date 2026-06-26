@@ -706,7 +706,8 @@
 }
 
 .eventPill,
-.timelineEventCard {
+.timelineEventCard,
+.detailDayEvent {
   --event-ink: var(--event-gray);
   --event-bg: var(--event-gray-bg);
   --event-border: var(--event-gray-border);
@@ -750,7 +751,8 @@
 }
 
 .eventPill[data-color="red"],
-.timelineEventCard[data-color="red"] {
+.timelineEventCard[data-color="red"],
+.detailDayEvent[data-color="red"] {
   --event-ink: var(--event-red);
   --event-bg: var(--event-red-bg);
   --event-border: var(--event-red-border);
@@ -759,7 +761,8 @@
 }
 
 .eventPill[data-color="orange"],
-.timelineEventCard[data-color="orange"] {
+.timelineEventCard[data-color="orange"],
+.detailDayEvent[data-color="orange"] {
   --event-ink: var(--event-orange);
   --event-bg: var(--event-orange-bg);
   --event-border: var(--event-orange-border);
@@ -768,7 +771,8 @@
 }
 
 .eventPill[data-color="yellow"],
-.timelineEventCard[data-color="yellow"] {
+.timelineEventCard[data-color="yellow"],
+.detailDayEvent[data-color="yellow"] {
   --event-ink: var(--event-yellow);
   --event-bg: var(--event-yellow-bg);
   --event-border: var(--event-yellow-border);
@@ -777,7 +781,8 @@
 }
 
 .eventPill[data-color="green"],
-.timelineEventCard[data-color="green"] {
+.timelineEventCard[data-color="green"],
+.detailDayEvent[data-color="green"] {
   --event-ink: var(--event-green);
   --event-bg: var(--event-green-bg);
   --event-border: var(--event-green-border);
@@ -786,7 +791,8 @@
 }
 
 .eventPill[data-color="blue"],
-.timelineEventCard[data-color="blue"] {
+.timelineEventCard[data-color="blue"],
+.detailDayEvent[data-color="blue"] {
   --event-ink: var(--event-blue);
   --event-bg: var(--event-blue-bg);
   --event-border: var(--event-blue-border);
@@ -795,7 +801,8 @@
 }
 
 .eventPill[data-color="purple"],
-.timelineEventCard[data-color="purple"] {
+.timelineEventCard[data-color="purple"],
+.detailDayEvent[data-color="purple"] {
   --event-ink: var(--event-purple);
   --event-bg: var(--event-purple-bg);
   --event-border: var(--event-purple-border);
@@ -1124,6 +1131,52 @@
   margin: 0;
   font-size: 1.35rem;
   line-height: 1.22;
+}
+
+.detailDayEvents {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.detailDayEvent {
+  display: grid;
+  gap: 7px;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid color-mix(in srgb, var(--event-ink) 34%, transparent);
+  border-left: 4px solid var(--event-ink);
+  border-radius: 7px;
+  background:
+    linear-gradient(color-mix(in srgb, var(--background) 48%, transparent), color-mix(in srgb, var(--background) 48%, transparent)),
+    var(--event-bg);
+  color: var(--foreground);
+  text-align: left;
+}
+
+.detailDayEvent:hover {
+  border-color: color-mix(in srgb, var(--event-ink) 56%, transparent);
+}
+
+.detailDayEvent strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.88rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detailDayEvent p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: color-mix(in srgb, var(--foreground) 76%, transparent);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .detailMeta {

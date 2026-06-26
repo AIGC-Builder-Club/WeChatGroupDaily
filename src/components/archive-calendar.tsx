@@ -127,6 +127,7 @@ export function ArchiveCalendar({
       view: "month",
     }),
   );
+  const [selectedDayDate, setSelectedDayDate] = useState<Date | null>(null);
   const [query, setQuery] = useState("");
   const [selectedPerson, setSelectedPerson] = useState(initialPerson);
   const [selectedTopic, setSelectedTopic] = useState(initialTopic);
@@ -172,6 +173,13 @@ export function ArchiveCalendar({
     () => filteredEvents.find((event) => event.id === resolvedSelectedEventId) ?? null,
     [filteredEvents, resolvedSelectedEventId],
   );
+  const selectedDayEvents = useMemo(() => {
+    if (!selectedDayDate) {
+      return [];
+    }
+
+    return filteredEvents.filter((event) => isSameDay(event.start, selectedDayDate));
+  }, [filteredEvents, selectedDayDate]);
   const totalMessages = useMemo(
     () => reports.reduce((sum, report) => sum + (report.stats.messages ?? 0), 0),
     [reports],
@@ -191,6 +199,7 @@ export function ArchiveCalendar({
       nextSelectedTopic?: string;
       nextView?: CalendarViewType;
     } = {}) => {
+      setSelectedDayDate(null);
       setSelectedEventId(
         resolveDefaultSelectedEventId({
           currentDate: nextCurrentDate,
@@ -240,11 +249,11 @@ export function ArchiveCalendar({
     }
   }, [currentDate, selectDefaultEvent, view]);
 
-  const openDayView = useCallback((date: Date) => {
-    selectDefaultEvent({ nextCurrentDate: date, nextView: "day" });
-    setCurrentDate(date);
-    setView("day");
-  }, [selectDefaultEvent]);
+  const selectDayEvents = useCallback((date: Date) => {
+    setSelectedDayDate(startOfDay(date));
+    setSelectedEventId(null);
+    setRightOpen(true);
+  }, []);
 
   const goToToday = useCallback(() => {
     const nextDate = startOfDay(new Date());
@@ -296,6 +305,7 @@ export function ArchiveCalendar({
   }, [changeView, goToToday, navigate]);
 
   const selectEvent = useCallback((event: ArchiveCalendarEvent) => {
+    setSelectedDayDate(null);
     setSelectedEventId(event.id);
     setRightOpen(true);
   }, []);
@@ -307,6 +317,7 @@ export function ArchiveCalendar({
     }
 
     setSelectedEventId(null);
+    setSelectedDayDate(null);
   }, []);
 
   const handleQueryChange = useCallback(
@@ -400,7 +411,7 @@ export function ArchiveCalendar({
               currentDate={currentDate}
               events={filteredEvents}
               selectedEventId={selectedEvent?.id}
-              onOpenDay={openDayView}
+              onOpenDayEvents={selectDayEvents}
               onSelectEvent={selectEvent}
               onDateSelect={setCurrentDate}
             />
@@ -418,7 +429,13 @@ export function ArchiveCalendar({
       </section>
 
       <aside className={[styles.rightSidebar, rightOpen ? "" : styles.sidebarClosed].join(" ")}>
-        <DetailPanel event={selectedEvent} onClose={() => setRightOpen(false)} />
+        <DetailPanel
+          dayDate={selectedDayDate}
+          dayEvents={selectedDayEvents}
+          event={selectedDayDate ? null : selectedEvent}
+          onClose={() => setRightOpen(false)}
+          onSelectEvent={selectEvent}
+        />
       </aside>
     </main>
   );
@@ -824,14 +841,14 @@ function MonthView({
   currentDate,
   events,
   selectedEventId,
-  onOpenDay,
+  onOpenDayEvents,
   onSelectEvent,
   onDateSelect,
 }: {
   currentDate: Date;
   events: ArchiveCalendarEvent[];
   selectedEventId: string | undefined;
-  onOpenDay: (date: Date) => void;
+  onOpenDayEvents: (date: Date) => void;
   onSelectEvent: (event: ArchiveCalendarEvent) => void;
   onDateSelect: (date: Date) => void;
 }) {
@@ -913,8 +930,8 @@ function MonthView({
                   ]
                     .filter(Boolean)
                     .join(" ")}
-                  aria-label={`打开 ${format(day, "M月d日")} 日视图`}
-                  onClick={() => onOpenDay(day)}
+                  aria-label={`在详情栏查看 ${format(day, "M月d日")} 当天事件`}
+                  onClick={() => onOpenDayEvents(day)}
                   type="button"
                 >
                   {format(day, "d")}
@@ -931,9 +948,9 @@ function MonthView({
                   ))}
                   {dayEvents.length > 3 ? (
                     <button
-                      aria-label={`${format(day, "M月d日")} 还有 ${hiddenDayEventCount} 条事件，打开日视图`}
+                      aria-label={`${format(day, "M月d日")} 还有 ${hiddenDayEventCount} 条事件，在详情栏查看当天事件`}
                       className={styles.moreEvents}
-                      onClick={() => onOpenDay(day)}
+                      onClick={() => onOpenDayEvents(day)}
                       type="button"
                     >
                       展开剩余 {hiddenDayEventCount} 条
@@ -1204,12 +1221,82 @@ function EventPill({
 }
 
 function DetailPanel({
+  dayDate,
+  dayEvents,
   event,
   onClose,
+  onSelectEvent,
 }: {
+  dayDate: Date | null;
+  dayEvents: ArchiveCalendarEvent[];
   event: ArchiveCalendarEvent | null;
   onClose: () => void;
+  onSelectEvent: (event: ArchiveCalendarEvent) => void;
 }) {
+  if (dayDate) {
+    const fullReportHref = dayEvents[0]?.meta.rawHtmlHref;
+
+    return (
+      <div className={styles.detailPanel}>
+        <div className={styles.detailHeader}>
+          <div>
+            <span>{format(dayDate, "yyyy年M月d日 EEEE", { locale: zhCN })}</span>
+          </div>
+          <Button aria-label="收起详情栏" onClick={onClose} size="icon" type="button" variant="ghost">
+            <PanelRightClose />
+          </Button>
+        </div>
+        <div className={styles.detailScroll}>
+          <h2>当天事件</h2>
+          <div className={styles.detailMeta}>
+            <span>
+              <Clock3 />
+              {dayEvents.length} 条故事
+            </span>
+          </div>
+          {dayEvents.length > 0 ? (
+            <div className={styles.detailDayEvents}>
+              {dayEvents.map((dayEvent) => (
+                <button
+                  className={styles.detailDayEvent}
+                  data-color={dayEvent.color}
+                  key={dayEvent.id}
+                  onClick={() => onSelectEvent(dayEvent)}
+                  type="button"
+                >
+                  <span className={styles.timelineEventMeta}>
+                    <span>{formatTimelineEventTime(dayEvent)}</span>
+                    {dayEvent.meta.topic ? <span className={styles.timelineTopic}>{dayEvent.meta.topic}</span> : null}
+                  </span>
+                  <strong>{dayEvent.title}</strong>
+                  <p>{dayEvent.description}</p>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className={styles.emptyDetail}>
+              <Sparkles />
+              <h2>当天没有故事</h2>
+            </div>
+          )}
+        </div>
+        {fullReportHref ? (
+          <Button asChild className={styles.rawLink}>
+            <a href={fullReportHref}>
+              打开完整日报
+              <ExternalLink />
+            </a>
+          </Button>
+        ) : (
+          <Button className={styles.rawLink} disabled type="button">
+            打开完整日报
+            <ExternalLink />
+          </Button>
+        )}
+      </div>
+    );
+  }
+
   if (!event) {
     return (
       <div className={styles.detailPanel}>
