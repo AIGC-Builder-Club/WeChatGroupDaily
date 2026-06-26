@@ -26,12 +26,16 @@ describe("archive calendar UI layout contract", () => {
     const toolbar = getFunctionSource("CalendarToolbar");
     const toolbarStyles = getStyleBlock(".toolbar");
     const toolbarCenter = getStyleBlock(".toolbarCenter");
+    const toolbarTitle = getStyleBlock(".toolbarTitle");
+    const toolbarTitleMeta = getStyleBlock(".toolbarTitleMeta");
     const viewTabsStyles = getStyleBlock(".viewTabs");
 
     expect(toolbar).toContain("styles.toolbarLeft");
     expect(toolbar).toContain("styles.toolbarCenter");
     expect(toolbar).toContain("styles.toolbarRight");
     expect(toolbar).toContain("styles.toolbarRightControls");
+    expect(toolbar).toContain("styles.toolbarTitleMeta");
+    expect(toolbar).not.toContain("className={styles.visibleCount}");
     expect(toolbar).toContain('format(currentDate, "yyyy 年 M 月"');
     expect(toolbar).toContain("<ArchiveViewTabs");
     expect(toolbar).not.toContain("<select");
@@ -45,6 +49,10 @@ describe("archive calendar UI layout contract", () => {
     expect(viewTabs).not.toContain("<select");
     expect(toolbarStyles).toContain("grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr)");
     expect(toolbarCenter).toContain("justify-self: center");
+    expect(toolbarTitle).toContain("display: flex");
+    expect(toolbarTitle).toContain("flex-direction: column");
+    expect(toolbarTitleMeta).toContain("font-size: 0.76rem");
+    expect(toolbarTitleMeta).toContain("color: var(--muted-foreground)");
     expect(viewTabsStyles).toContain("grid-template-columns: repeat(3, minmax(0, 1fr))");
   });
 
@@ -73,19 +81,22 @@ describe("archive calendar UI layout contract", () => {
     expect(toolbar).toContain('variant="secondary"');
 
     expect(toolbarDateControls).toContain("display: flex");
-    expect(toolbarDateControls).toContain("gap: 6px");
-    expect(toolbarDateButton).toContain("border-radius: 999px");
-    expect(toolbarDateButton).toContain("background: var(--accent)");
-    expect(toolbarNavButton).toContain("width: 2.5rem");
-    expect(toolbarNavButton).toContain("height: 2.5rem");
-    expect(toolbarTodayButton).toContain("min-width: 4.75rem");
-    expect(toolbarTodayButton).toContain("height: 2.5rem");
+    expect(toolbarDateControls).toContain("gap: 4px");
+    expect(toolbarDateButton).toContain("border-radius: 6px");
+    expect(toolbarNavButton).toContain("width: 2rem");
+    expect(toolbarNavButton).toContain("height: 2rem");
+    expect(toolbarTodayButton).toContain("min-width: 3.5rem");
+    expect(toolbarTodayButton).toContain("height: 2rem");
+    expect(toolbarTodayButton).toContain("font-size: 0.82rem");
   });
 
-  it("uses compact event times and hides story numbers in calendar event cards", () => {
+  it("uses compact event times and one-line month cards", () => {
     const timelineEventCard = getFunctionSource("TimelineEventCard");
     const eventPill = getFunctionSource("EventPill");
     const formatTimelineEventTime = getFunctionSource("formatTimelineEventTime");
+    const formatMonthEventTime = getFunctionSource("formatMonthEventTime");
+    const compactEventStyles = getStyleBlock(".compactEvent");
+    const monthEventTimeStyles = getStyleBlock(".monthEventTime");
 
     expect(timelineEventCard).toContain("formatTimelineEventTime(event)");
     expect(timelineEventCard).toContain("event.title");
@@ -93,7 +104,19 @@ describe("archive calendar UI layout contract", () => {
     expect(eventPill).toContain("formatTimelineEventTime(event)");
     expect(eventPill).toContain("event.title");
     expect(eventPill).not.toContain("timelineStoryNo");
+    expect(eventPill).toContain("formatMonthEventTime(event)");
+    expect(eventPill).toContain("styles.monthEventTime");
+    expect(eventPill).not.toContain("styles.monthEventTitle");
+    expect(eventPill).toContain("compact ? styles.compactEvent : \"\"");
     expect(formatTimelineEventTime).toContain("formatArchiveEventTime(event)");
+    expect(formatMonthEventTime).toContain("minutes === 0");
+    expect(formatMonthEventTime).toContain('format(event.start, "h a")');
+    expect(formatMonthEventTime).toContain('format(event.start, "h:mm a")');
+    expect(compactEventStyles).toContain("display: flex");
+    expect(compactEventStyles).toContain("height: 1.25rem");
+    expect(compactEventStyles).toContain("padding: 0 0.375rem 0 0.5rem");
+    expect(monthEventTimeStyles).toContain("color: var(--event-ink)");
+    expect(monthEventTimeStyles).toContain("font-weight: 400");
   });
 
   it("adds month switching controls to the sidebar mini calendar header", () => {
@@ -265,7 +288,9 @@ describe("archive calendar UI layout contract", () => {
     expect(eventPill).toContain("formatTimelineEventTime(event)");
     expect(eventPillStyles).toContain("border-left: 4px solid var(--event-ink)");
     expect(eventPillStyles).toContain("linear-gradient");
-    expect(compactEventStyles).toContain("grid-template-rows: auto minmax(0, 1fr)");
+    expect(compactEventStyles).toContain("display: flex");
+    expect(compactEventStyles).toContain("height: 1.25rem");
+    expect(compactEventStyles).toContain("padding: 0 0.375rem 0 0.5rem");
   });
 
   it("matches the reference week and day views by handling free horizontal wheel navigation", () => {
