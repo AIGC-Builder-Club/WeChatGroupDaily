@@ -59,6 +59,11 @@ import {
   type CalendarViewType,
 } from "@/lib/archive-calendar-events";
 import {
+  getDefaultSelectedEventId,
+  getDefaultViewDate,
+  getResolvedSelectedEventId,
+} from "@/lib/archive-calendar-view";
+import {
   buildTimelineDayLayout,
   minutesToPercent,
 } from "@/lib/archive-timeline";
@@ -108,9 +113,19 @@ export function ArchiveCalendar({
   initialTopic = "",
 }: ArchiveCalendarProps) {
   const events = useMemo(() => toArchiveCalendarEvents(reports), [reports]);
+  const initialCurrentDate = useMemo(() => getLatestEventDate(events), [events]);
   const [view, setView] = useState<CalendarViewType>("month");
-  const [currentDate, setCurrentDate] = useState(() => getLatestEventDate(events));
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [currentDate, setCurrentDate] = useState(() => initialCurrentDate);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(() =>
+    resolveDefaultSelectedEventId({
+      currentDate: initialCurrentDate,
+      events,
+      normalizedQuery: "",
+      selectedPerson: initialPerson,
+      selectedTopic: initialTopic,
+      view: "month",
+    }),
+  );
   const [query, setQuery] = useState("");
   const [selectedPerson, setSelectedPerson] = useState(initialPerson);
   const [selectedTopic, setSelectedTopic] = useState(initialTopic);
@@ -131,39 +146,110 @@ export function ArchiveCalendar({
         .sort(compareEventsAscending),
     [events, normalizedQuery, selectedPerson, selectedTopic],
   );
-  const selectedEvent = useMemo(
-    () => filteredEvents.find((event) => event.id === selectedEventId) ?? filteredEvents[0] ?? null,
-    [filteredEvents, selectedEventId],
-  );
   const visibleEvents = useMemo(
     () => getVisibleEvents(filteredEvents, currentDate, view),
     [currentDate, filteredEvents, view],
+  );
+  const defaultSelectedEventId = useMemo(
+    () =>
+      resolveDefaultSelectedEventId({
+        currentDate,
+        events,
+        normalizedQuery,
+        selectedPerson,
+        selectedTopic,
+        view,
+      }),
+    [currentDate, events, normalizedQuery, selectedPerson, selectedTopic, view],
+  );
+  const resolvedSelectedEventId = getResolvedSelectedEventId({
+    defaultSelectedEventId,
+    events: filteredEvents,
+    selectedEventId,
+  });
+  const selectedEvent = useMemo(
+    () => filteredEvents.find((event) => event.id === resolvedSelectedEventId) ?? null,
+    [filteredEvents, resolvedSelectedEventId],
   );
   const totalMessages = useMemo(
     () => reports.reduce((sum, report) => sum + (report.stats.messages ?? 0), 0),
     [reports],
   );
   const totalStories = events.length;
+  const selectDefaultEvent = useCallback(
+    ({
+      nextCurrentDate = currentDate,
+      nextQuery = query,
+      nextSelectedPerson = selectedPerson,
+      nextSelectedTopic = selectedTopic,
+      nextView = view,
+    }: {
+      nextCurrentDate?: Date;
+      nextQuery?: string;
+      nextSelectedPerson?: string;
+      nextSelectedTopic?: string;
+      nextView?: CalendarViewType;
+    } = {}) => {
+      setSelectedEventId(
+        resolveDefaultSelectedEventId({
+          currentDate: nextCurrentDate,
+          events,
+          normalizedQuery: normalizeQuery(nextQuery),
+          selectedPerson: nextSelectedPerson,
+          selectedTopic: nextSelectedTopic,
+          view: nextView,
+        }),
+      );
+    },
+    [currentDate, events, query, selectedPerson, selectedTopic, view],
+  );
+  const changeView = useCallback(
+    (nextView: CalendarViewType) => {
+      const nextDate = getDefaultViewDate(view, nextView) ?? currentDate;
+
+      setCurrentDate(nextDate);
+      selectDefaultEvent({ nextCurrentDate: nextDate, nextView });
+      setView(nextView);
+    },
+    [currentDate, selectDefaultEvent, view],
+  );
 
   const navigate = useCallback(
     (direction: -1 | 1) => {
-      setCurrentDate((date) => {
-        if (view === "month") return addMonths(date, direction);
-        if (view === "week") return addWeeks(date, direction);
-        return addDays(date, direction);
-      });
+      const nextDate =
+        view === "month"
+          ? addMonths(currentDate, direction)
+          : view === "week"
+            ? addWeeks(currentDate, direction)
+            : addDays(currentDate, direction);
+
+      setCurrentDate(nextDate);
+      if (view !== "month") {
+        selectDefaultEvent({ nextCurrentDate: nextDate });
+      }
     },
-    [view],
+    [currentDate, selectDefaultEvent, view],
   );
 
   const navigateMonth = useCallback((direction: -1 | 1) => {
-    setCurrentDate((date) => addMonths(date, direction));
-  }, []);
+    const nextDate = addMonths(currentDate, direction);
+    setCurrentDate(nextDate);
+    if (view !== "month") {
+      selectDefaultEvent({ nextCurrentDate: nextDate });
+    }
+  }, [currentDate, selectDefaultEvent, view]);
 
   const openDayView = useCallback((date: Date) => {
+    selectDefaultEvent({ nextCurrentDate: date, nextView: "day" });
     setCurrentDate(date);
     setView("day");
-  }, []);
+  }, [selectDefaultEvent]);
+
+  const goToToday = useCallback(() => {
+    const nextDate = startOfDay(new Date());
+    setCurrentDate(nextDate);
+    selectDefaultEvent({ nextCurrentDate: nextDate });
+  }, [selectDefaultEvent]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -195,26 +281,58 @@ export function ArchiveCalendar({
         event.preventDefault();
         navigate(1);
       }
-      if (event.key.toLowerCase() === "m") setView("month");
-      if (event.key.toLowerCase() === "w") setView("week");
-      if (event.key.toLowerCase() === "d") setView("day");
-      if (event.key.toLowerCase() === "t") setCurrentDate(startOfDay(new Date()));
+      if (event.key.toLowerCase() === "m") changeView("month");
+      if (event.key.toLowerCase() === "w") changeView("week");
+      if (event.key.toLowerCase() === "d") changeView("day");
+      if (event.key.toLowerCase() === "t") {
+        event.preventDefault();
+        goToToday();
+      }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [navigate]);
+  }, [changeView, goToToday, navigate]);
 
   const selectEvent = useCallback((event: ArchiveCalendarEvent) => {
     setSelectedEventId(event.id);
     setRightOpen(true);
   }, []);
 
-  const clearFilters = () => {
+  const handleQueryChange = useCallback(
+    (nextQuery: string) => {
+      setQuery(nextQuery);
+      selectDefaultEvent({ nextQuery });
+    },
+    [selectDefaultEvent],
+  );
+
+  const handleSelectPerson = useCallback(
+    (person: string) => {
+      setSelectedPerson(person);
+      selectDefaultEvent({ nextSelectedPerson: person });
+    },
+    [selectDefaultEvent],
+  );
+
+  const handleSelectTopic = useCallback(
+    (topic: string) => {
+      setSelectedTopic(topic);
+      selectDefaultEvent({ nextSelectedTopic: topic });
+    },
+    [selectDefaultEvent],
+  );
+
+  const clearFilters = useCallback(() => {
     setQuery("");
     setSelectedPerson("");
     setSelectedTopic("");
-  };
+    selectDefaultEvent({
+      nextQuery: "",
+      nextSelectedPerson: "",
+      nextSelectedTopic: "",
+    });
+  }, [selectDefaultEvent]);
 
   return (
     <main className={styles.appShell}>
@@ -225,7 +343,7 @@ export function ArchiveCalendar({
         <div className={styles.leftSidebarGap} />
         <aside className={styles.leftSidebar} aria-hidden={!leftOpen}>
           <SidebarHeader reports={reports.length} stories={totalStories} messages={totalMessages} />
-          <SidebarSearch query={query} searchRef={searchRef} onQueryChange={setQuery} />
+          <SidebarSearch query={query} searchRef={searchRef} onQueryChange={handleQueryChange} />
           <MiniDatePicker
             currentDate={currentDate}
             events={filteredEvents}
@@ -238,8 +356,8 @@ export function ArchiveCalendar({
             topics={topics}
             selectedTopic={selectedTopic}
             onTabChange={setActiveFilterTab}
-            onSelectPerson={setSelectedPerson}
-            onSelectTopic={setSelectedTopic}
+            onSelectPerson={handleSelectPerson}
+            onSelectTopic={handleSelectTopic}
           />
           <div className={styles.sidebarFooter}>
             <ThemeToggle />
@@ -258,9 +376,9 @@ export function ArchiveCalendar({
           totalCount={filteredEvents.length}
           selectedPerson={selectedPerson}
           selectedTopic={selectedTopic}
-          onToday={() => setCurrentDate(startOfDay(new Date()))}
+          onToday={goToToday}
           onNavigateMonth={navigateMonth}
-          onViewChange={setView}
+          onViewChange={changeView}
           onClearFilters={clearFilters}
           onToggleLeft={() => setLeftOpen((open) => !open)}
           onToggleRight={() => setRightOpen((open) => !open)}
@@ -924,13 +1042,19 @@ function TimelineView({
         {days.map((day) => {
           const key = dateKey(day);
           const layout = layouts.get(key);
+          const dayEvents = layout?.timedEvents ?? [];
 
           return (
             <section className={styles.timelineColumn} key={key} aria-label={format(day, "yyyy-MM-dd")}>
               {timelineHours.map((hour) => (
                 <div className={styles.timelineHourLine} key={hour} />
               ))}
-              {layout?.timedEvents.map((item) => (
+              {view === "day" && dayEvents.length === 0 ? (
+                <div className={styles.emptyDay}>
+                  <h2>今天没有数据</h2>
+                </div>
+              ) : null}
+              {dayEvents.map((item) => (
                 <TimelineEventCard
                   event={item.event}
                   isSelected={item.event.id === selectedEventId}
@@ -1487,4 +1611,31 @@ function dateKey(date: Date): string {
 
 function normalizeQuery(value: string): string {
   return value.replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function resolveDefaultSelectedEventId({
+  currentDate,
+  events,
+  normalizedQuery,
+  selectedPerson,
+  selectedTopic,
+  view,
+}: {
+  currentDate: Date;
+  events: ArchiveCalendarEvent[];
+  normalizedQuery: string;
+  selectedPerson: string;
+  selectedTopic: string;
+  view: CalendarViewType;
+}): string | null {
+  const filteredEvents = events
+    .filter((event) => matchesFilters(event, selectedPerson, selectedTopic, normalizedQuery))
+    .sort(compareEventsAscending);
+  const visibleEvents = getVisibleEvents(filteredEvents, currentDate, view);
+
+  return getDefaultSelectedEventId({
+    currentDate,
+    events: visibleEvents,
+    view,
+  });
 }

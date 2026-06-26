@@ -376,8 +376,10 @@ describe("archive calendar UI layout contract", () => {
     const timelineView = getFunctionSource("TimelineView");
 
     expect(timelineView).not.toContain("No stories");
-    expect(timelineView).not.toContain("styles.emptyDay");
-    expect(calendarStyles).not.toContain(".emptyDay");
+    expect(timelineView).toContain('view === "day" && dayEvents.length === 0');
+    expect(timelineView).toContain("styles.emptyDay");
+    expect(timelineView).toContain("今天没有数据");
+    expect(calendarStyles).toContain(".emptyDay");
   });
 
   it("keeps the visible calendar position unchanged when selecting an event", () => {
@@ -393,5 +395,29 @@ describe("archive calendar UI layout contract", () => {
     expect(selectEvent).toContain("setSelectedEventId(event.id)");
     expect(selectEvent).toContain("setRightOpen(true)");
     expect(selectEvent).not.toContain("setCurrentDate");
+  });
+
+  it("defaults the detail panel selection to the first event in the current view", () => {
+    const appSource = getFunctionSource("ArchiveCalendar");
+
+    expect(appSource).toContain("const defaultSelectedEventId = useMemo(");
+    expect(appSource).toContain("const resolvedSelectedEventId = getResolvedSelectedEventId({");
+    expect(appSource).toContain("defaultSelectedEventId,");
+    expect(appSource).toContain("events: filteredEvents,");
+    expect(appSource).toContain("selectedEventId,");
+    expect(appSource).toContain("filteredEvents.find((event) => event.id === resolvedSelectedEventId)");
+    expect(appSource).toContain("resolveDefaultSelectedEventId({");
+    expect(appSource).not.toContain("filteredEvents[0] ?? null");
+  });
+
+  it("does not recompute the selected detail card while month scrolling changes the visible range", () => {
+    const appSource = getFunctionSource("ArchiveCalendar");
+
+    expect(appSource).toContain("const defaultSelectedEventId = useMemo(");
+    expect(appSource).toContain("const navigateMonth = useCallback((direction: -1 | 1) => {");
+    expect(appSource).toContain("setCurrentDate(nextDate);");
+    expect(appSource).toContain("if (view !== \"month\") {");
+    expect(appSource).toContain("selectDefaultEvent({ nextCurrentDate: nextDate });");
+    expect(appSource).toContain("const resolvedSelectedEventId = getResolvedSelectedEventId({");
   });
 });
