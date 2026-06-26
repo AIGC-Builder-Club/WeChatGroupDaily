@@ -359,6 +359,10 @@
   background: transparent;
   color: var(--foreground);
   text-align: left;
+  transition:
+    background 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease;
 }
 
 .peopleList button {
@@ -370,10 +374,24 @@
 }
 
 .peopleList button:hover,
-.topicList button:hover,
-.activeFilterItem,
-.activeTopic {
+.topicList button:hover {
   background: var(--accent);
+}
+
+.peopleList button.activeFilterItem,
+.topicList button.activeTopic {
+  background: var(--accent);
+  color: inherit;
+}
+
+.peopleList button.activeFilterItem:hover,
+.topicList button.activeTopic:hover {
+  background: var(--accent);
+}
+
+.peopleList button.activeFilterItem strong,
+.topicList button.activeTopic strong {
+  color: inherit;
 }
 
 .peopleList span,
