@@ -24,6 +24,8 @@ const latestFilename = "🦞奇奇怪怪养龙虾群2026-06-24.html";
 const rangedFilename = "🦞奇奇怪怪养龙虾群2026-05-07 → 2026-05-13.html";
 const singleDayFilename = "🦞奇奇怪怪养龙虾群2026-05-25.html";
 const fallbackAvatarFilename = "🦞奇奇怪怪养龙虾群2026-06-21 → 2026-06-23.html";
+const totalReportCount = 29;
+const latestReportSlug = "2026-06-26";
 
 describe("archive filename parsing", () => {
   it("parses single-day and ranged report filenames", () => {
@@ -254,8 +256,8 @@ describe("report metadata parsing", () => {
     const reports = loadAllReports();
     const params = getReportStaticParams();
 
-    expect(reports).toHaveLength(27);
-    expect(reports[0]?.slug).toBe("2026-06-24");
+    expect(reports).toHaveLength(totalReportCount);
+    expect(reports[0]?.slug).toBe(latestReportSlug);
     expect(reports.map((report) => report.slug)).toEqual(
       [...new Set(reports.map((report) => report.slug))],
     );
@@ -274,7 +276,7 @@ describe("report metadata parsing", () => {
   it("reports known PNG mismatches as warnings instead of hard failures", () => {
     const diagnostics = buildArchiveDiagnostics();
 
-    expect(diagnostics.totalHtml).toBe(27);
+    expect(diagnostics.totalHtml).toBe(totalReportCount);
     expect(diagnostics.missingScreenshotSlugs).toEqual(["2026-05-23"]);
     expect(diagnostics.extraScreenshotFiles).toEqual([
       "🦞奇奇怪怪养龙虾群2026-05-27 → 2026-05-28_副本.png",

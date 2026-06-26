@@ -1144,10 +1144,10 @@ function DetailPanel({
         ) : null}
       </div>
       <Button asChild className={styles.rawLink}>
-        <Link href={event.meta.rawHtmlHref}>
+        <a href={event.meta.rawHtmlHref}>
           打开完整日报
           <ExternalLink />
-        </Link>
+        </a>
       </Button>
     </div>
   );
