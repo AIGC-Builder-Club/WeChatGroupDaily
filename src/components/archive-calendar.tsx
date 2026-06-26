@@ -382,6 +382,9 @@ function CalendarToolbar({
         </Tooltip>
         <div className={styles.toolbarTitle}>
           <strong>{format(currentDate, "yyyy 年 M 月", { locale: zhCN })}</strong>
+          <span className={styles.toolbarTitleMeta}>
+            显示 {visibleCount} / {totalCount}
+          </span>
         </div>
       </div>
 
@@ -422,9 +425,6 @@ function CalendarToolbar({
               <ChevronRight />
             </Button>
           </div>
-          <span className={styles.visibleCount}>
-            {visibleCount} / {totalCount}
-          </span>
           {hasFilters ? (
             <Button className={styles.toolbarTextButton} onClick={onClearFilters} size="sm" type="button" variant="secondary">
               清除筛选
@@ -988,6 +988,19 @@ function formatTimelineEventTime(event: ArchiveCalendarEvent): string {
   return formatArchiveEventTime(event);
 }
 
+function formatMonthEventTime(event: ArchiveCalendarEvent): string {
+  if (event.isAllDay) {
+    return event.meta.story.time ?? "全天";
+  }
+
+  const minutes = event.start.getMinutes();
+  if (minutes === 0) {
+    return format(event.start, "h a");
+  }
+
+  return format(event.start, "h:mm a");
+}
+
 function EventPill({
   event,
   compact = false,
@@ -998,7 +1011,27 @@ function EventPill({
   compact?: boolean;
   isSelected: boolean;
   onSelect: (event: ArchiveCalendarEvent) => void;
-}) {
+  }) {
+  if (compact) {
+    return (
+      <button
+        className={[
+          styles.eventPill,
+          styles.compactEvent,
+          isSelected ? styles.selectedEvent : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        data-color={event.color}
+        onClick={() => onSelect(event)}
+        type="button"
+      >
+        <span className={styles.monthEventTime}>{formatMonthEventTime(event)}</span>
+        {event.meta.topic ? <span className={styles.timelineTopic}>{event.meta.topic}</span> : null}
+      </button>
+    );
+  }
+
   return (
     <button
       className={[
