@@ -936,7 +936,7 @@ function MonthView({
                       onClick={() => onOpenDay(day)}
                       type="button"
                     >
-                      展开剩余 {hiddenDayEventCount} 条
+                      剩余 {hiddenDayEventCount} 条
                     </button>
                   ) : null}
                 </div>

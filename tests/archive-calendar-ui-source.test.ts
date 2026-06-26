@@ -340,10 +340,17 @@ describe("archive calendar UI layout contract", () => {
     expect(appSource).toContain("onOpenDay={openDayView}");
     expect(monthView).toContain("dayEvents.slice(0, 3)");
     expect(monthView).toContain("dayEvents.length > 3");
+    expect(monthView).toContain("剩余 {hiddenDayEventCount} 条");
+    expect(monthView).not.toContain("展开剩余 {hiddenDayEventCount} 条");
     expect(monthView).toContain("onOpenDay(day)");
     expect(monthEvents).toContain("display: grid");
     expect(moreEvents).toContain("cursor: pointer");
-    expect(moreEvents).toContain("font-weight: 700");
+    expect(moreEvents).toContain("font-size: 0.6875rem");
+    expect(moreEvents).toContain("font-weight: 400");
+    expect(moreEvents).toContain("border: 0");
+    expect(moreEvents).toContain("background: transparent");
+    expect(moreEvents).not.toContain("border: 1px dashed");
+    expect(getStyleBlock(".moreEvents:hover")).not.toContain("background:");
   });
 
   it("renders month events with the same card vocabulary as week and day events", () => {
