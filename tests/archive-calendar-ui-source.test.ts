@@ -109,7 +109,7 @@ describe("archive calendar UI layout contract", () => {
     expect(eventPill).not.toContain("timelineStoryNo");
     expect(eventPill).toContain("formatMonthEventTime(event)");
     expect(eventPill).toContain("styles.monthEventTime");
-    expect(eventPill).not.toContain("styles.monthEventTitle");
+    expect(eventPill).toContain("styles.monthEventTopic");
     expect(eventPill).toContain("compact ? styles.compactEvent : \"\"");
     expect(formatTimelineEventTime).toContain('view === "week"');
     expect(formatTimelineEventTime).toContain("formatMonthEventTime(event)");
@@ -119,9 +119,18 @@ describe("archive calendar UI layout contract", () => {
     expect(formatMonthEventTime).toContain('format(event.start, "h:mm a")');
     expect(compactEventStyles).toContain("display: flex");
     expect(compactEventStyles).toContain("height: 1.25rem");
-    expect(compactEventStyles).toContain("padding: 0 0.375rem 0 0.5rem");
-    expect(monthEventTimeStyles).toContain("color: var(--event-ink)");
+    expect(compactEventStyles).toContain("border: 0");
+    expect(compactEventStyles).toContain("border-left: 3px solid var(--event-border)");
+    expect(compactEventStyles).toContain("background: transparent");
+    expect(compactEventStyles).toContain("padding: 0 0.25rem 0 0.3125rem");
+    expect(monthEventTimeStyles).toContain("color: var(--event-time-ink)");
+    expect(monthEventTimeStyles).toContain("font-size: 0.6875rem");
     expect(monthEventTimeStyles).toContain("font-weight: 400");
+
+    const monthEventTopicStyles = getStyleBlock(".monthEventTopic");
+    expect(monthEventTopicStyles).toContain("color: var(--event-title-ink)");
+    expect(monthEventTopicStyles).toContain("font-size: 0.6875rem");
+    expect(monthEventTopicStyles).toContain("font-weight: 700");
   });
 
   it("adds month switching controls to the sidebar mini calendar header", () => {
@@ -339,7 +348,7 @@ describe("archive calendar UI layout contract", () => {
     expect(eventPillStyles).toContain("linear-gradient");
     expect(compactEventStyles).toContain("display: flex");
     expect(compactEventStyles).toContain("height: 1.25rem");
-    expect(compactEventStyles).toContain("padding: 0 0.375rem 0 0.5rem");
+    expect(compactEventStyles).toContain("padding: 0 0.25rem 0 0.3125rem");
   });
 
   it("matches the reference week and day views by handling free horizontal wheel navigation", () => {

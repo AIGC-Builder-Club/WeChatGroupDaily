@@ -715,6 +715,9 @@
 .timelineEventCard {
   --event-ink: var(--event-gray);
   --event-bg: var(--event-gray-bg);
+  --event-border: var(--event-gray-border);
+  --event-time-ink: var(--event-gray-time);
+  --event-title-ink: var(--event-gray-title);
 }
 
 .eventPill {
@@ -737,47 +740,73 @@
 .compactEvent {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 0.25rem;
   height: 1.25rem;
   min-height: 0;
-  padding: 0 0.375rem 0 0.5rem;
-  border-radius: 6px;
+  padding: 0 0.25rem 0 0.3125rem;
+  border: 0;
+  border-left: 3px solid var(--event-border);
+  border-radius: 2px;
+  background: transparent;
+  color: inherit;
+}
+
+.compactEvent:hover {
+  background: var(--accent);
 }
 
 .eventPill[data-color="red"],
 .timelineEventCard[data-color="red"] {
   --event-ink: var(--event-red);
   --event-bg: var(--event-red-bg);
+  --event-border: var(--event-red-border);
+  --event-time-ink: var(--event-red-time);
+  --event-title-ink: var(--event-red-title);
 }
 
 .eventPill[data-color="orange"],
 .timelineEventCard[data-color="orange"] {
   --event-ink: var(--event-orange);
   --event-bg: var(--event-orange-bg);
+  --event-border: var(--event-orange-border);
+  --event-time-ink: var(--event-orange-time);
+  --event-title-ink: var(--event-orange-title);
 }
 
 .eventPill[data-color="yellow"],
 .timelineEventCard[data-color="yellow"] {
   --event-ink: var(--event-yellow);
   --event-bg: var(--event-yellow-bg);
+  --event-border: var(--event-yellow-border);
+  --event-time-ink: var(--event-yellow-time);
+  --event-title-ink: var(--event-yellow-title);
 }
 
 .eventPill[data-color="green"],
 .timelineEventCard[data-color="green"] {
   --event-ink: var(--event-green);
   --event-bg: var(--event-green-bg);
+  --event-border: var(--event-green-border);
+  --event-time-ink: var(--event-green-time);
+  --event-title-ink: var(--event-green-title);
 }
 
 .eventPill[data-color="blue"],
 .timelineEventCard[data-color="blue"] {
   --event-ink: var(--event-blue);
   --event-bg: var(--event-blue-bg);
+  --event-border: var(--event-blue-border);
+  --event-time-ink: var(--event-blue-time);
+  --event-title-ink: var(--event-blue-title);
 }
 
 .eventPill[data-color="purple"],
 .timelineEventCard[data-color="purple"] {
   --event-ink: var(--event-purple);
   --event-bg: var(--event-purple-bg);
+  --event-border: var(--event-purple-border);
+  --event-time-ink: var(--event-purple-time);
+  --event-title-ink: var(--event-purple-title);
 }
 
 .eventPill strong {
@@ -788,10 +817,6 @@
   line-height: 1.16;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.compactEvent .monthEventTitle {
-  display: none;
 }
 
 .compactEvent .timelineTopic {
@@ -807,12 +832,24 @@
   min-width: 0;
   overflow: hidden;
   flex: 0 0 auto;
-  color: var(--event-ink);
+  color: var(--event-time-ink);
   font-size: 0.6875rem;
   font-weight: 400;
   line-height: 1;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.monthEventTopic {
+  min-width: 0;
+  overflow: hidden;
+  flex: 1 1 auto;
+  color: var(--event-title-ink);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .selectedEvent {

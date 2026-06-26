@@ -1166,7 +1166,7 @@ function EventPill({
         type="button"
       >
         <span className={styles.monthEventTime}>{formatMonthEventTime(event)}</span>
-        {event.meta.topic ? <span className={styles.timelineTopic}>{event.meta.topic}</span> : null}
+        <span className={styles.monthEventTopic}>{event.meta.topic}</span>
       </button>
     );
   }
