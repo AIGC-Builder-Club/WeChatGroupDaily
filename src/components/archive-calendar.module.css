@@ -167,6 +167,14 @@
   color: var(--foreground);
   font-size: 0.84rem;
   outline: 0;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.sidebarSearch input::-webkit-search-cancel-button,
+.sidebarSearch input::-webkit-search-decoration {
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .sidebarSearch button {

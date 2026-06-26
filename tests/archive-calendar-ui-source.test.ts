@@ -179,6 +179,16 @@ describe("archive calendar UI layout contract", () => {
     expect(sidebarFooter).not.toContain("margin-top: auto");
   });
 
+  it("hides the native search clear control beside the custom clear button", () => {
+    const sidebarSearch = getFunctionSource("SidebarSearch");
+
+    expect(sidebarSearch).toContain('type="search"');
+    expect(sidebarSearch).toContain('aria-label="清空搜索"');
+    expect(calendarStyles).toContain(".sidebarSearch input::-webkit-search-cancel-button");
+    expect(calendarStyles).toContain("-webkit-appearance: none");
+    expect(calendarStyles).toContain("appearance: none");
+  });
+
   it("keeps the desktop calendar shell viewport-bound with calendar-internal scrolling", () => {
     const appShell = getStyleBlock(".appShell");
     const calendarPane = getStyleBlock(".calendarPane");
