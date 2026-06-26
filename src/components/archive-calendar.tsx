@@ -40,6 +40,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type MouseEvent,
   type RefObject,
 } from "react";
 
@@ -90,7 +91,7 @@ type TopicSummary = {
 
 type SidebarFilterTab = "people" | "topic";
 
-const weekdayLabels = ["一", "二", "三", "四", "五", "六", "日"];
+const weekdayLabels = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 const viewOptions: Array<{
   value: CalendarViewType;
   label: string;
@@ -299,6 +300,15 @@ export function ArchiveCalendar({
     setRightOpen(true);
   }, []);
 
+  const clearSelectedEvent = useCallback((event: MouseEvent<HTMLElement>) => {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest("button, a, input, textarea, select")) {
+      return;
+    }
+
+    setSelectedEventId(null);
+  }, []);
+
   const handleQueryChange = useCallback(
     (nextQuery: string) => {
       setQuery(nextQuery);
@@ -384,7 +394,7 @@ export function ArchiveCalendar({
           onToggleRight={() => setRightOpen((open) => !open)}
         />
 
-        <div className={styles.calendarSurface}>
+        <div className={styles.calendarSurface} onClick={clearSelectedEvent}>
           {view === "month" ? (
             <MonthView
               currentDate={currentDate}

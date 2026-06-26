@@ -43,6 +43,7 @@
   --sidebar: #f8f8f7;
   --context-panel: #ffffff;
   --calendar-weekend: #fcfcfc;
+  --calendar-grid-border: color-mix(in srgb, var(--border) 40%, transparent);
   --calendar-hover: #f3f0eb;
   --event-red: #b23e31;
   --event-red-bg: #ffe1d4;
