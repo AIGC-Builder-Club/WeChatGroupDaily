@@ -35,6 +35,7 @@ import Link from "next/link";
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -99,6 +100,7 @@ const timelineBufferDays: Record<"day" | "week", number> = {
   day: 3,
   week: 7,
 };
+const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 export function ArchiveCalendar({
   reports,
@@ -706,7 +708,7 @@ function MonthView({
   onDateSelect: (date: Date) => void;
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [rowHeight, setRowHeight] = useState(0);
+  const [measuredRowHeight, setMeasuredRowHeight] = useState(0);
   const visibleRows = useMemo(() => buildConsecutiveMonthRows(currentDate), [currentDate]);
   const handleScrollNavigate = useCallback(
     (rowsDelta: number) => {
@@ -716,27 +718,33 @@ function MonthView({
   );
   const { scrollOffset } = useVerticalScroll({
     containerRef: scrollContainerRef,
-    rowHeight,
+    rowHeight: measuredRowHeight,
     onNavigate: handleScrollNavigate,
   });
-  const dynamicBuffer = monthBaseBufferRows + (rowHeight > 0 ? Math.ceil(Math.abs(scrollOffset) / rowHeight) : 0);
+  const dynamicBuffer = monthBaseBufferRows + (measuredRowHeight > 0 ? Math.ceil(Math.abs(scrollOffset) / measuredRowHeight) : 0);
   const bufferedRows = useMemo(
     () => buildBufferedMonthRows(visibleRows, dynamicBuffer),
     [dynamicBuffer, visibleRows],
   );
   const days = useMemo(() => bufferedRows.flat(), [bufferedRows]);
-  const monthRowHeight = rowHeight || 94;
+  const monthGridHeightPercent = (bufferedRows.length / monthVisibleRowCount) * 100;
+  const bufferedRowOffsetPercent = (dynamicBuffer / bufferedRows.length) * 100;
+  const scrollOffsetOperator = scrollOffset >= 0 ? "+" : "-";
   const scrollStyle: CSSProperties = {
-    gridTemplateRows: `repeat(${bufferedRows.length}, ${monthRowHeight}px)`,
-    transform: `translateY(${-(dynamicBuffer * rowHeight) + scrollOffset}px)`,
+    height: `${monthGridHeightPercent}%`,
+    gridTemplateRows: `repeat(${bufferedRows.length}, minmax(0, 1fr))`,
+    transform: `translateY(calc(-${bufferedRowOffsetPercent}% ${scrollOffsetOperator} ${Math.abs(scrollOffset)}px))`,
   };
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
     const measure = () => {
-      setRowHeight(container.clientHeight / monthVisibleRowCount);
+      const nextRowHeight = container.clientHeight / monthVisibleRowCount;
+      if (nextRowHeight > 0) {
+        setMeasuredRowHeight(nextRowHeight);
+      }
     };
     measure();
 
@@ -935,6 +943,7 @@ function TimelineView({
                     width: `calc(${item.width}% - 8px)`,
                     zIndex: item.column + 1,
                   }}
+                  view={view}
                 />
               ))}
             </section>
@@ -952,11 +961,13 @@ function TimelineEventCard({
   isSelected,
   onSelect,
   style,
+  view,
 }: {
   event: ArchiveCalendarEvent;
   isSelected: boolean;
   onSelect: (event: ArchiveCalendarEvent) => void;
   style?: CSSProperties;
+  view: "week" | "day";
 }) {
   return (
     <button
@@ -972,7 +983,7 @@ function TimelineEventCard({
       type="button"
     >
       <span className={styles.timelineEventMeta}>
-        <span>{formatTimelineEventTime(event)}</span>
+        <span>{formatTimelineEventTime(event, view)}</span>
         {event.meta.topic ? <span className={styles.timelineTopic}>{event.meta.topic}</span> : null}
       </span>
       <strong>{event.title}</strong>
@@ -984,7 +995,11 @@ function formatTimelineHour(hour: number): string {
   return `${String(hour).padStart(2, "0")}:00`;
 }
 
-function formatTimelineEventTime(event: ArchiveCalendarEvent): string {
+function formatTimelineEventTime(event: ArchiveCalendarEvent, view: "week" | "day" = "day"): string {
+  if (view === "week") {
+    return formatMonthEventTime(event);
+  }
+
   return formatArchiveEventTime(event);
 }
 
