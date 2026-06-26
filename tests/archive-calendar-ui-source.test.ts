@@ -205,6 +205,20 @@ describe("archive calendar UI layout contract", () => {
     expect(detailHeader).toContain("padding: 8px 12px");
   });
 
+  it("opens raw HTML reports with a document navigation instead of app routing", () => {
+    const detailPanel = getFunctionSource("DetailPanel");
+    const rawLinkStart = detailPanel.indexOf("event.meta.rawHtmlHref");
+    expect(rawLinkStart).toBeGreaterThanOrEqual(0);
+
+    const rawLinkMarkup = detailPanel.slice(
+      detailPanel.lastIndexOf("<Button", rawLinkStart),
+      detailPanel.indexOf("</Button>", rawLinkStart),
+    );
+
+    expect(rawLinkMarkup).toContain("<a href={event.meta.rawHtmlHref}");
+    expect(rawLinkMarkup).not.toContain("<Link href={event.meta.rawHtmlHref}");
+  });
+
   it("collapses the left sidebar with a gap element instead of squeezing contents", () => {
     const appSource = getFunctionSource("ArchiveCalendar");
     const leftSidebar = getStyleBlock(".leftSidebar");
