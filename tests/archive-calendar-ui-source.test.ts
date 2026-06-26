@@ -158,10 +158,16 @@ describe("archive calendar UI layout contract", () => {
 
   it("combines people and topic filters behind a sidebar tab switcher", () => {
     const appSource = getFunctionSource("ArchiveCalendar");
+    const activeFilterTabStyles = getStyleBlock(".activeSidebarFilterTab");
+    const activeFilterItemStyles = getStyleBlock(".peopleList button.activeFilterItem,\n.topicList button.activeTopic");
 
     expect(appSource).toContain("<SidebarFilterTabs");
     expect(appSource).not.toContain("<PeopleFilter");
     expect(appSource).not.toContain("<TopicFilter");
+    expect(activeFilterTabStyles).toContain("background: var(--background)");
+    expect(activeFilterTabStyles).toContain("box-shadow");
+    expect(activeFilterItemStyles).toContain("background: var(--accent)");
+    expect(activeFilterItemStyles).toContain("color: inherit");
   });
 
   it("lets the sidebar filter list fill remaining space above the footer", () => {
