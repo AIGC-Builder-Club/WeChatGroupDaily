@@ -648,8 +648,10 @@
 }
 
 .weekdayRow span {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  padding-left: calc(7px + 0.375rem);
+  text-align: left;
 }
 
 .monthGrid {
@@ -1162,9 +1164,8 @@
 }
 
 .detailHeaderTitle {
-  display: grid;
+  display: flex;
   align-items: center;
-  grid-template-columns: 1.75rem minmax(0, 1fr);
   gap: 4px;
   min-width: 0;
 }
@@ -1188,6 +1189,7 @@
   width: 1.75rem;
   height: 1.75rem;
   flex: 0 0 auto;
+  padding: 0;
 }
 
 .detailScroll {
@@ -1366,57 +1368,63 @@
   line-height: 1.68;
 }
 
-.detailPeople {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 16px;
+.detailEmphasis {
+  color: var(--foreground);
+  font-weight: 700;
 }
 
-.detailPeople a {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 100%;
-  padding: 5px 8px 5px 5px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 0.8rem;
-  text-decoration: none;
-}
-
-.detailPeople span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.quoteList {
+.chatList {
   display: grid;
-  gap: 10px;
+  gap: 12px;
   margin-top: 18px;
 }
 
-.quoteList blockquote {
-  margin: 0;
-  padding: 12px;
-  border-left: 3px solid var(--primary);
-  border-radius: 0 6px 6px 0;
-  background: var(--card);
+.chatMessage {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+  align-items: start;
 }
 
-.quoteList p {
-  margin: 0;
-  font-size: 0.86rem;
-  line-height: 1.65;
+.chatAvatar {
+  width: 2.1rem;
+  height: 2.1rem;
+  margin-top: 3px;
 }
 
-.quoteList cite {
-  display: block;
-  margin-top: 8px;
+.chatBody {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.chatName {
   color: var(--muted-foreground);
-  font-size: 0.76rem;
-  font-style: normal;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.chatBubble {
+  width: fit-content;
+  max-width: 100%;
+  min-width: 4.5rem;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--event-border) 42%, transparent);
+  border-left: 4px solid var(--event-border);
+  border-radius: 12px 13px 13px 10px;
+  background: var(--card);
+  color: var(--foreground);
+  font-size: 0.9rem;
+  line-height: 1.58;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--foreground) 5%, transparent);
+  white-space: pre-wrap;
+}
+
+.chatBubble p {
+  margin: 0;
+  white-space: inherit;
 }
 
 .outputBox {
@@ -1446,6 +1454,32 @@
   margin: 12px;
   background: var(--primary);
   color: #fff;
+}
+
+.detailSwitcher {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 12px 12px 0;
+  border-top: 1px solid var(--border);
+}
+
+.detailSwitcherButton {
+  min-width: 0;
+  border: 0;
+  border-radius: 6px;
+  background: var(--secondary);
+  color: var(--foreground);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--foreground) 10%, transparent);
+  font-weight: 700;
+}
+
+.detailSwitcherButton:hover {
+  background: var(--accent);
+}
+
+.detailSwitcherButton:disabled {
+  opacity: 0.42;
 }
 
 .emptyDetail {

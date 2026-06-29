@@ -41,6 +41,7 @@ import {
   useState,
   type CSSProperties,
   type MouseEvent,
+  type ReactNode,
   type RefObject,
 } from "react";
 
@@ -122,7 +123,7 @@ export function ArchiveCalendar({
   const reportOverviewsByDay = useMemo(() => getReportOverviewsForDay(reports), [reports]);
   const initialCurrentDate = useMemo(() => getLatestEventDate(events), [events]);
   const [view, setView] = useState<CalendarViewType>("month");
-  const [currentDate, setCurrentDate] = useState(() => initialCurrentDate);
+  const [currentDate, setCurrentDate] = useState(() => startOfMonth(initialCurrentDate));
   const [monthDisplayDate, setMonthDisplayDate] = useState(() => startOfMonth(initialCurrentDate));
   const [selectedEventId, setSelectedEventId] = useState<string | null>(() =>
     resolveDefaultSelectedEventId({
@@ -189,6 +190,22 @@ export function ArchiveCalendar({
 
     return filteredEvents.filter((event) => isSameDay(event.start, selectedDayDate));
   }, [filteredEvents, selectedDayDate]);
+  const selectedEventDayEvents = useMemo(() => {
+    if (!selectedEvent) {
+      return [];
+    }
+
+    return filteredEvents
+      .filter((event) => isSameDay(event.start, selectedEvent.start))
+      .sort(compareEventsAscending);
+  }, [filteredEvents, selectedEvent]);
+  const selectedEventDayIndex = selectedEvent
+    ? selectedEventDayEvents.findIndex((event) => event.id === selectedEvent.id)
+    : -1;
+  const previousSelectedDayEvent =
+    selectedEventDayIndex > 0 ? selectedEventDayEvents[selectedEventDayIndex - 1] : null;
+  const nextSelectedDayEvent =
+    selectedEventDayIndex >= 0 ? (selectedEventDayEvents[selectedEventDayIndex + 1] ?? null) : null;
   const selectedDayReportOverviews = selectedDayDate
     ? (reportOverviewsByDay.get(dateKey(selectedDayDate)) ?? [])
     : [];
@@ -476,9 +493,12 @@ export function ArchiveCalendar({
           dayDate={selectedDayDate}
           dayEvents={selectedDayEvents}
           event={selectedDayDate ? null : selectedEvent}
+          people={people}
           onClose={() => setRightOpen(false)}
           onReturnToDayEvents={returnToDayEvents}
           onSelectEvent={selectEvent}
+          previousEvent={previousSelectedDayEvent}
+          nextEvent={nextSelectedDayEvent}
           reportOverviews={selectedDayReportOverviews}
           returnDayDate={resolvedDetailReturnDayDate}
         />
@@ -1008,7 +1028,7 @@ function MonthView({
                   onClick={() => onOpenDayEvents(day)}
                   type="button"
                 >
-                  {format(day, "d")}
+                  {formatMonthDayLabel(day)}
                 </button>
                 <div className={styles.monthEvents}>
                   {visibleDayEvents.map((event) => (
@@ -1298,18 +1318,24 @@ function DetailPanel({
   dayDate,
   dayEvents,
   event,
+  people,
   onClose,
   onReturnToDayEvents,
   onSelectEvent,
+  previousEvent,
+  nextEvent,
   reportOverviews,
   returnDayDate,
 }: {
   dayDate: Date | null;
   dayEvents: ArchiveCalendarEvent[];
   event: ArchiveCalendarEvent | null;
+  people: PersonSummary[];
   onClose: () => void;
   onReturnToDayEvents: () => void;
   onSelectEvent: (event: ArchiveCalendarEvent) => void;
+  previousEvent: ArchiveCalendarEvent | null;
+  nextEvent: ArchiveCalendarEvent | null;
   reportOverviews: DayReportOverview[];
   returnDayDate: Date | null;
 }) {
@@ -1401,14 +1427,7 @@ function DetailPanel({
     <div className={styles.detailPanel}>
       <div className={styles.detailHeader}>
         <div className={styles.detailHeaderTitle}>
-          <div
-            className={[
-              styles.detailHeaderBackSlot,
-              returnDayDate ? styles.detailHeaderBackSlotActive : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-          >
+          <div className={cn(styles.detailHeaderBackSlot, styles.detailHeaderBackSlotActive)}>
             {returnDayDate ? (
               <Button
                 aria-label="返回当天事件"
@@ -1442,22 +1461,32 @@ function DetailPanel({
             </Link>
           ) : null}
         </div>
-        <p className={styles.detailSummary}>{event.description}</p>
-        <div className={styles.detailPeople}>
-          {event.meta.participants.map((participant) => (
-            <Link href={`/people/${encodeURIComponent(participant.name)}`} key={participant.name}>
-              <AvatarBadge avatar={participant} />
-              <span>{participant.name}</span>
-            </Link>
-          ))}
-        </div>
+        <p className={styles.detailSummary}>{renderBracketedEmphasis(event.description)}</p>
         {event.meta.quotes.length > 0 ? (
-          <div className={styles.quoteList}>
+          <div className={styles.chatList}>
             {event.meta.quotes.map((quote) => (
-              <blockquote key={`${quote.text}-${quote.attr ?? ""}`}>
-                <p>{quote.text}</p>
-                {quote.attr ? <cite>{quote.attr}</cite> : null}
-              </blockquote>
+              (() => {
+                const speakerName = getQuoteSpeakerName(quote);
+                const speakerAvatar = getQuoteAvatar(people, event.meta.participants, quote);
+
+                return (
+                  <div className={styles.chatMessage} key={`${quote.text}-${quote.attr ?? ""}`}>
+                    <Avatar className={styles.chatAvatar}>
+                      {speakerAvatar?.avatarSrc ? (
+                        <AvatarImage
+                          alt={speakerAvatar.avatarAlt ?? speakerAvatar.name ?? speakerName ?? "群人物"}
+                          src={speakerAvatar.avatarSrc}
+                        />
+                      ) : null}
+                      <AvatarFallback>{speakerAvatar?.avatarInitials ?? "聊"}</AvatarFallback>
+                    </Avatar>
+                    <div className={styles.chatBody}>
+                      <div className={styles.chatName}>{speakerName ?? "匿名"}</div>
+                      <div className={styles.chatBubble}>{quote.text}</div>
+                    </div>
+                  </div>
+                );
+              })()
             ))}
           </div>
         ) : null}
@@ -1467,6 +1496,28 @@ function DetailPanel({
             <strong>{event.meta.output}</strong>
           </div>
         ) : null}
+      </div>
+      <div className={styles.detailSwitcher}>
+        <Button
+          className={styles.detailSwitcherButton}
+          disabled={!previousEvent}
+          onClick={() => previousEvent && onSelectEvent(previousEvent)}
+          type="button"
+          variant="ghost"
+        >
+          <ChevronLeft />
+          上一篇
+        </Button>
+        <Button
+          className={styles.detailSwitcherButton}
+          disabled={!nextEvent}
+          onClick={() => nextEvent && onSelectEvent(nextEvent)}
+          type="button"
+          variant="ghost"
+        >
+          下一篇
+          <ChevronRight />
+        </Button>
       </div>
       <Button asChild className={styles.rawLink}>
         <a href={event.meta.rawHtmlHref}>
@@ -1514,6 +1565,54 @@ function AvatarBadge({ avatar }: { avatar: ReportAvatar }) {
       <AvatarFallback>{avatar.avatarInitials}</AvatarFallback>
     </Avatar>
   );
+}
+
+function getQuoteAvatar(
+  people: PersonSummary[],
+  participants: ReportAvatar[],
+  quote: { attr?: string },
+): ReportAvatar | undefined {
+  const speaker = getQuoteSpeakerName(quote);
+  if (!speaker) {
+    return undefined;
+  }
+
+  return (
+    people.find((person) => person.name === speaker)?.avatar ??
+    participants.find((participant) => participant.name === speaker)
+  );
+}
+
+function getQuoteSpeakerName(quote: { attr?: string }): string | undefined {
+  const speaker = quote.attr?.replace(/^[-—]\s*/, "").trim();
+  return speaker || undefined;
+}
+
+function renderBracketedEmphasis(text: string): ReactNode {
+  const emphasizedPattern = /「[^」]+」/g;
+  const nodes: ReactNode[] = [];
+  let lastIndex = 0;
+
+  for (const match of text.matchAll(emphasizedPattern)) {
+    const matchIndex = match.index ?? 0;
+
+    if (matchIndex > lastIndex) {
+      nodes.push(text.slice(lastIndex, matchIndex));
+    }
+
+    nodes.push(
+      <strong className={styles.detailEmphasis} key={`${matchIndex}-${match[0]}`}>
+        {match[0]}
+      </strong>,
+    );
+    lastIndex = matchIndex + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    nodes.push(text.slice(lastIndex));
+  }
+
+  return nodes.length > 0 ? nodes : text;
 }
 
 function buildMonthDays(currentDate: Date): Date[] {
@@ -1630,6 +1729,10 @@ function compareEventsAscending(first: ArchiveCalendarEvent, second: ArchiveCale
 
 function formatEventDate(event: ArchiveCalendarEvent): string {
   return format(event.start, "yyyy 年 M 月 d 日 EEEE", { locale: zhCN });
+}
+
+function formatMonthDayLabel(day: Date): string {
+  return day.getDate() === 1 ? format(day, "M 月 d 日", { locale: zhCN }) : format(day, "d");
 }
 
 function normalizeContinuousScrollOffset(

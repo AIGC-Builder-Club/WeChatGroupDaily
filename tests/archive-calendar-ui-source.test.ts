@@ -363,7 +363,6 @@ describe("archive calendar UI layout contract", () => {
     const avatarBadge = getFunctionSource("AvatarBadge");
     const activeFilterTabStyles = getStyleBlock(".activeSidebarFilterTab");
     const activeFilterItemStyles = getStyleBlock(".peopleList button.activeFilterItem,\n.topicList button.activeTopic");
-    const detailPeopleStyles = getStyleBlock(".detailPeople a");
 
     expect(appSource).toContain("<SidebarFilterTabs");
     expect(appSource).not.toContain("<PeopleFilter");
@@ -373,7 +372,6 @@ describe("archive calendar UI layout contract", () => {
     expect(activeFilterTabStyles).toContain("color: var(--foreground)");
     expect(activeFilterItemStyles).toContain("background: var(--accent)");
     expect(activeFilterItemStyles).toContain("color: inherit");
-    expect(detailPeopleStyles).toContain("border-radius: 6px");
   });
 
   it("lets the sidebar filter list fill remaining space above the footer", () => {
@@ -407,6 +405,7 @@ describe("archive calendar UI layout contract", () => {
     const calendarPane = getStyleBlock(".calendarPane");
     const calendarSurface = getStyleBlock(".calendarSurface");
     const weekdayRow = getStyleBlock(".weekdayRow", 1);
+    const weekdayLabel = getStyleBlock(".weekdayRow span", 1);
     const monthCell = getStyleBlock(".monthCell");
     const monthLastColumnCell = getStyleBlock(".monthCell:nth-child(7n)");
     const outsideMonth = getStyleBlock(".outsideMonth");
@@ -419,6 +418,11 @@ describe("archive calendar UI layout contract", () => {
     expect(calendarSurface).toContain("height: 100%");
     expect(calendarSurface).toContain("min-height: 0");
     expect(weekdayRow).toContain("border-bottom: 1px solid var(--calendar-grid-border)");
+    expect(weekdayLabel).toContain("display: flex");
+    expect(weekdayLabel).toContain("align-items: center");
+    expect(weekdayLabel).toContain("padding-left: calc(7px + 0.375rem)");
+    expect(weekdayLabel).toContain("text-align: left");
+    expect(calendarStyles).toContain("grid-template-columns: repeat(7, minmax(0, 1fr))");
     expect(monthCell).toContain("border-right: 1px solid var(--calendar-grid-border)");
     expect(monthCell).toContain("border-bottom: 1px solid var(--calendar-grid-border)");
     expect(monthCell).toContain("background: var(--calendar-month)");
@@ -522,6 +526,8 @@ describe("archive calendar UI layout contract", () => {
     expect(appSource).toContain("onOpenDayEvents={selectDayEvents}");
     expect(dayNumberButton).toContain("onOpenDayEvents(day)");
     expect(dayNumberButton).not.toContain("onOpenDay(day)");
+    expect(monthView).toContain("formatMonthDayLabel(day)");
+    expect(monthView).not.toContain('format(day, "d")');
   });
 
   it("drives month scrolling through free wheel offsets and buffered week rows", () => {
@@ -597,7 +603,13 @@ describe("archive calendar UI layout contract", () => {
     const detailDayEvent = getStyleBlock(".detailDayEvent", 1);
     const detailDayEventHover = getStyleBlock(".detailDayEvent:hover");
     const detailDayEventDescription = getStyleBlock(".detailDayEvent p");
-    const quoteBlock = getStyleBlock(".quoteList blockquote");
+    const detailEmphasis = getStyleBlock(".detailEmphasis");
+    const chatList = getStyleBlock(".chatList");
+    const chatMessage = getStyleBlock(".chatMessage");
+    const chatAvatar = getStyleBlock(".chatAvatar");
+    const chatBody = getStyleBlock(".chatBody");
+    const chatName = getStyleBlock(".chatName");
+    const chatBubble = getStyleBlock(".chatBubble");
     const rawLink = getStyleBlock(".rawLink");
 
     expect(detailPanel).toContain("dayEvents");
@@ -611,7 +623,19 @@ describe("archive calendar UI layout contract", () => {
     expect(detailPanel).toContain("styles.detailDayEvents");
     expect(detailPanel).toContain("dayEvents.map((dayEvent)");
     expect(detailPanel).toContain("onSelectEvent(dayEvent)");
+    expect(detailPanel).toContain("<p>{dayEvent.description}</p>");
     expect(detailPanel).toContain("打开完整日报");
+    expect(detailPanel).toContain("styles.chatList");
+    expect(detailPanel).toContain("styles.chatMessage");
+    expect(detailPanel).toContain("styles.chatAvatar");
+    expect(detailPanel).toContain("styles.chatBody");
+    expect(detailPanel).toContain("styles.chatName");
+    expect(detailPanel).toContain("styles.chatBubble");
+    expect(detailPanel).toContain("people: PersonSummary[];");
+    expect(detailPanel).toContain("getQuoteAvatar(people, event.meta.participants, quote)");
+    expect(detailPanel).toContain("getQuoteSpeakerName(quote)");
+    expect(detailPanel).toContain("speakerName ?? \"匿名\"");
+    expect(detailPanel).not.toContain("styles.detailPeople");
     expect(detailPanel.indexOf("className={styles.detailScroll}")).toBeLessThan(
       detailPanel.indexOf("className={styles.rawLink}"),
     );
@@ -623,14 +647,42 @@ describe("archive calendar UI layout contract", () => {
     expect(detailDayEvent).toContain("background: color-mix(in srgb, var(--event-bg) 68%, transparent)");
     expect(detailDayEventHover).toContain("background: var(--accent)");
     expect(detailDayEventDescription).toContain("color: color-mix(in srgb, var(--foreground) 70%, transparent)");
-    expect(quoteBlock).toContain("background: var(--card)");
+    expect(detailEmphasis).toContain("font-weight: 700");
+    expect(detailEmphasis).toContain("color: var(--foreground)");
+    expect(chatList).toContain("display: grid");
+    expect(chatMessage).toContain("grid-template-columns: auto minmax(0, 1fr)");
+    expect(chatMessage).toContain("align-items: start");
+    expect(chatAvatar).toContain("width: 2.1rem");
+    expect(chatAvatar).toContain("height: 2.1rem");
+    expect(chatBody).toContain("display: grid");
+    expect(chatName).toContain("font-weight: 600");
+    expect(chatBubble).toContain("border: 1px solid color-mix(in srgb, var(--event-border) 42%, transparent)");
+    expect(chatBubble).toContain("border-left: 4px solid var(--event-border)");
+    expect(chatBubble).toContain("background: var(--card)");
+    expect(chatBubble).toContain("box-shadow: 0 1px 0 color-mix(in srgb, var(--foreground) 5%, transparent)");
+    expect(chatBubble).toContain("border-radius: 12px 13px 13px 10px");
+    expect(chatBubble).toContain("white-space: pre-wrap");
     expect(rawLink).toContain("color: #fff");
     expect(rawLink).toContain("background: var(--primary)");
   });
 
-  it("shows a back button in event details that returns to the event day list", () => {
+  it("emphasizes bracketed key phrases in right-detail summary copy", () => {
+    const detailPanel = getFunctionSource("DetailPanel");
+    const emphasisHelper = getFunctionSource("renderBracketedEmphasis");
+
+    expect(detailPanel).toContain("{renderBracketedEmphasis(event.description)}");
+    expect(detailPanel).not.toContain("{renderBracketedEmphasis(dayEvent.description)}");
+    expect(detailPanel).toContain("<p>{dayEvent.description}</p>");
+    expect(emphasisHelper).toContain('const emphasizedPattern = /「[^」]+」/g');
+    expect(emphasisHelper).toContain("className={styles.detailEmphasis}");
+    expect(emphasisHelper).toContain("match[0]");
+    expect(emphasisHelper).toContain("return nodes.length > 0 ? nodes : text;");
+  });
+
+  it("shows an event detail back button that returns to the event day list", () => {
     const appSource = getFunctionSource("ArchiveCalendar");
     const detailPanel = getFunctionSource("DetailPanel");
+    const detailHeaderBackSlot = getStyleBlock(".detailHeaderBackSlot");
     const detailHeaderBack = getStyleBlock(".detailHeaderBack");
     const detailHeaderTitle = getStyleBlock(".detailHeaderTitle");
 
@@ -640,6 +692,11 @@ describe("archive calendar UI layout contract", () => {
     const selectEvent = appSource.slice(
       selectEventStart,
       appSource.indexOf("const clearSelectedEvent", selectEventStart),
+    );
+    const eventDetailHeaderStart = detailPanel.indexOf("cn(styles.detailHeaderBackSlot");
+    const eventDetailHeader = detailPanel.slice(
+      eventDetailHeaderStart,
+      detailPanel.indexOf('<div className={styles.detailScroll}>', eventDetailHeaderStart),
     );
 
     expect(appSource).toContain("const [detailReturnDayDate, setDetailReturnDayDate] = useState<Date | null>(null)");
@@ -654,18 +711,79 @@ describe("archive calendar UI layout contract", () => {
 
     expect(detailPanel).toContain("returnDayDate");
     expect(detailPanel).toContain("onReturnToDayEvents");
-    expect(detailPanel).toContain("styles.detailHeaderBack");
-    expect(detailPanel).toContain('aria-label="返回当天事件"');
-    expect(detailPanel).toContain("<ChevronLeft />");
     expect(detailPanel).toContain("styles.detailHeaderBackSlot");
+    expect(detailPanel).toContain("styles.detailHeaderBackSlotActive");
+    expect(detailPanel).toContain("styles.detailHeaderBack");
+    expect(detailPanel).not.toContain("styles.detailBreadcrumb");
+    expect(detailPanel).not.toContain("styles.detailBreadcrumbDay");
+    expect(detailPanel).not.toContain("styles.detailBreadcrumbSeparator");
+    expect(detailPanel).not.toContain("styles.detailBreadcrumbCurrent");
+    expect(detailPanel).toContain('aria-label="返回当天事件"');
+    expect(detailPanel).toContain("{formatEventDate(event)}");
+    expect(detailPanel).toContain("<h2>{event.title}</h2>");
+    expect(eventDetailHeader).toContain("<ChevronLeft />");
+    expect(eventDetailHeader).not.toContain("{event.title}");
     expect(detailPanel).toContain("styles.detailHeaderTitle");
-    expect(detailPanel).toContain("returnDayDate ? styles.detailHeaderBackSlotActive :");
 
-    expect(detailHeaderBack).toContain("display: inline-flex");
-    expect(detailHeaderBack).toContain("align-items: center");
-    expect(detailHeaderTitle).toContain("display: grid");
+    expect(detailHeaderBackSlot).toContain("width: 1.75rem");
+    expect(detailHeaderBack).toContain("width: 1.75rem");
+    expect(detailHeaderBack).toContain("height: 1.75rem");
+    expect(detailHeaderTitle).toContain("min-width: 0");
+  });
+
+  it("computes filtered same-day previous and next events for event detail switching", () => {
+    const appSource = getFunctionSource("ArchiveCalendar");
+
+    expect(appSource).toContain("const selectedEventDayEvents = useMemo(() => {");
+    expect(appSource).toContain(".filter((event) => isSameDay(event.start, selectedEvent.start))");
+    expect(appSource).toContain(".sort(compareEventsAscending)");
+    expect(appSource).toContain("const selectedEventDayIndex = selectedEvent");
+    expect(appSource).toContain("? selectedEventDayEvents.findIndex((event) => event.id === selectedEvent.id)");
+    expect(appSource).toContain("const previousSelectedDayEvent =");
+    expect(appSource).toContain("selectedEventDayIndex > 0 ? selectedEventDayEvents[selectedEventDayIndex - 1] : null;");
+    expect(appSource).toContain("const nextSelectedDayEvent =");
+    expect(appSource).toContain("selectedEventDayIndex >= 0 ? (selectedEventDayEvents[selectedEventDayIndex + 1] ?? null) : null;");
+    expect(appSource).toContain("previousEvent={previousSelectedDayEvent}");
+    expect(appSource).toContain("nextEvent={nextSelectedDayEvent}");
+  });
+
+  it("renders previous and next detail controls only for a single event detail", () => {
+    const detailPanel = getFunctionSource("DetailPanel");
+    const dayDateBranch = detailPanel.slice(
+      detailPanel.indexOf("if (dayDate)"),
+      detailPanel.indexOf("if (!event)"),
+    );
+    const detailSwitcher = getStyleBlock(".detailSwitcher");
+    const detailSwitcherButton = getStyleBlock(".detailSwitcherButton");
+    const detailSwitcherButtonDisabled = getStyleBlock(".detailSwitcherButton:disabled");
+    const detailHeaderTitle = getStyleBlock(".detailHeaderTitle");
+
+    expect(detailPanel).toContain("previousEvent");
+    expect(detailPanel).toContain("nextEvent");
+    expect(detailPanel).toContain("previousEvent: ArchiveCalendarEvent | null;");
+    expect(detailPanel).toContain("nextEvent: ArchiveCalendarEvent | null;");
+    expect(detailPanel).toContain("className={styles.detailSwitcher}");
+    expect(detailPanel).toContain("disabled={!previousEvent}");
+    expect(detailPanel).toContain("disabled={!nextEvent}");
+    expect(detailPanel).toContain("onClick={() => previousEvent && onSelectEvent(previousEvent)}");
+    expect(detailPanel).toContain("onClick={() => nextEvent && onSelectEvent(nextEvent)}");
+    expect(detailPanel).toContain("className={styles.detailSwitcherButton}");
+    expect(detailPanel).toContain('variant="ghost"');
+    expect(detailPanel).toContain("上一篇");
+    expect(detailPanel).toContain("下一篇");
+    const eventDetailSwitcherIndex = detailPanel.indexOf("className={styles.detailSwitcher}");
+    const eventDetailRawLinkIndex = detailPanel.indexOf("className={styles.rawLink}", eventDetailSwitcherIndex);
+    expect(eventDetailSwitcherIndex).toBeLessThan(
+      eventDetailRawLinkIndex,
+    );
+    expect(dayDateBranch).not.toContain("styles.detailSwitcher");
+    expect(detailSwitcher).toContain("display: grid");
+    expect(detailSwitcher).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+    expect(detailSwitcherButton).toContain("min-width: 0");
+    expect(detailSwitcherButton).toContain("border: 0");
+    expect(detailSwitcherButton).toContain("background: var(--secondary)");
+    expect(detailSwitcherButtonDisabled).toContain("opacity:");
     expect(detailHeaderTitle).toContain("align-items: center");
-    expect(detailHeaderTitle).toContain("grid-template-columns: 1.75rem minmax(0, 1fr)");
   });
 
   it("renders month events with the same card vocabulary as week and day events", () => {
@@ -778,6 +896,7 @@ describe("archive calendar UI layout contract", () => {
     const appSource = getFunctionSource("ArchiveCalendar");
 
     expect(appSource).toContain("const defaultSelectedEventId = useMemo(");
+    expect(appSource).toContain("const [currentDate, setCurrentDate] = useState(() => startOfMonth(initialCurrentDate));");
     expect(appSource).toContain("const [monthDisplayDate, setMonthDisplayDate] = useState");
     expect(appSource).toContain("view === \"month\" ? monthDisplayDate : currentDate");
     expect(appSource).toContain("const navigateMonth = useCallback((direction: -1 | 1) => {");
