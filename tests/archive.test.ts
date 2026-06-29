@@ -65,6 +65,13 @@ describe("report metadata parsing", () => {
     expect(report.leadText.length).toBeGreaterThan(100);
     expect(report.stories.length).toBeGreaterThanOrEqual(3);
     expect(report.highlights.length).toBeGreaterThanOrEqual(4);
+    expect(report.highlights[0]).toEqual(
+      expect.objectContaining({
+        name: "ALSKai💥",
+        tag: expect.any(String),
+        desc: expect.any(String),
+      }),
+    );
     expect(report.hasScreenshot).toBe(true);
     expect(report.searchText).toContain("Falcon");
     expect(report.searchText).toContain("Token");
