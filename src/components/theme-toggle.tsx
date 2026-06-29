@@ -1,6 +1,6 @@
 "use client";
 
-import { Laptop, Moon, Sun } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useSyncExternalStore } from "react";
 
@@ -18,19 +18,11 @@ export function ThemeToggle() {
     () => true,
     () => false,
   );
-  const resolvedTheme = mounted ? theme ?? "system" : "system";
-  const Icon = resolvedTheme === "dark" ? Moon : resolvedTheme === "light" ? Sun : Laptop;
+  const resolvedTheme = mounted ? theme ?? "dark" : "dark";
+  const Icon = resolvedTheme === "dark" ? Moon : Sun;
 
   const cycleTheme = () => {
-    if (theme === "system") {
-      setTheme("light");
-      return;
-    }
-    if (theme === "light") {
-      setTheme("dark");
-      return;
-    }
-    setTheme("system");
+    setTheme(theme === "dark" ? "light" : "dark");
   };
 
   return (
