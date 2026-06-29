@@ -63,6 +63,7 @@ import {
   type ArchiveCalendarEvent,
   type CalendarViewType,
 } from "@/lib/archive-calendar-events";
+import { getDominantVisibleMonthDate } from "@/lib/archive-calendar-month";
 import {
   getDefaultSelectedEventId,
   getDefaultViewDate,
@@ -122,6 +123,7 @@ export function ArchiveCalendar({
   const initialCurrentDate = useMemo(() => getLatestEventDate(events), [events]);
   const [view, setView] = useState<CalendarViewType>("month");
   const [currentDate, setCurrentDate] = useState(() => initialCurrentDate);
+  const [monthDisplayDate, setMonthDisplayDate] = useState(() => startOfMonth(initialCurrentDate));
   const [selectedEventId, setSelectedEventId] = useState<string | null>(() =>
     resolveDefaultSelectedEventId({
       currentDate: initialCurrentDate,
@@ -155,20 +157,20 @@ export function ArchiveCalendar({
     [events, normalizedQuery, selectedPerson, selectedTopic],
   );
   const visibleEvents = useMemo(
-    () => getVisibleEvents(filteredEvents, currentDate, view),
-    [currentDate, filteredEvents, view],
+    () => getVisibleEvents(filteredEvents, view === "month" ? monthDisplayDate : currentDate, view),
+    [currentDate, filteredEvents, monthDisplayDate, view],
   );
   const defaultSelectedEventId = useMemo(
     () =>
       resolveDefaultSelectedEventId({
-        currentDate,
+        currentDate: view === "month" ? monthDisplayDate : currentDate,
         events,
         normalizedQuery,
         selectedPerson,
         selectedTopic,
         view,
       }),
-    [currentDate, events, normalizedQuery, selectedPerson, selectedTopic, view],
+    [currentDate, events, monthDisplayDate, normalizedQuery, selectedPerson, selectedTopic, view],
   );
   const resolvedSelectedEventId = getResolvedSelectedEventId({
     defaultSelectedEventId,
@@ -179,6 +181,7 @@ export function ArchiveCalendar({
     () => filteredEvents.find((event) => event.id === resolvedSelectedEventId) ?? null,
     [filteredEvents, resolvedSelectedEventId],
   );
+  const resolvedDetailReturnDayDate = detailReturnDayDate ?? (selectedEvent ? startOfDay(selectedEvent.start) : null);
   const selectedDayEvents = useMemo(() => {
     if (!selectedDayDate) {
       return [];
@@ -228,6 +231,9 @@ export function ArchiveCalendar({
       const nextDate = getDefaultViewDate(view, nextView) ?? currentDate;
 
       setCurrentDate(nextDate);
+      if (nextView === "month") {
+        setMonthDisplayDate(startOfMonth(nextDate));
+      }
       selectDefaultEvent({ nextCurrentDate: nextDate, nextView });
       setView(nextView);
     },
@@ -238,26 +244,33 @@ export function ArchiveCalendar({
     (direction: -1 | 1) => {
       const nextDate =
         view === "month"
-          ? addMonths(currentDate, direction)
+          ? addMonths(monthDisplayDate, direction)
           : view === "week"
             ? addWeeks(currentDate, direction)
             : addDays(currentDate, direction);
 
       setCurrentDate(nextDate);
+      if (view === "month") {
+        setMonthDisplayDate(startOfMonth(nextDate));
+      }
       if (view !== "month") {
         selectDefaultEvent({ nextCurrentDate: nextDate });
       }
     },
-    [currentDate, selectDefaultEvent, view],
+    [currentDate, monthDisplayDate, selectDefaultEvent, view],
   );
 
   const navigateMonth = useCallback((direction: -1 | 1) => {
-    const nextDate = addMonths(currentDate, direction);
+    const navigationDate = view === "month" ? monthDisplayDate : currentDate;
+    const nextDate = addMonths(navigationDate, direction);
     setCurrentDate(nextDate);
+    if (view === "month") {
+      setMonthDisplayDate(startOfMonth(nextDate));
+    }
     if (view !== "month") {
       selectDefaultEvent({ nextCurrentDate: nextDate });
     }
-  }, [currentDate, selectDefaultEvent, view]);
+  }, [currentDate, monthDisplayDate, selectDefaultEvent, view]);
 
   const selectDayEvents = useCallback((date: Date) => {
     const selectedDate = startOfDay(date);
@@ -271,6 +284,7 @@ export function ArchiveCalendar({
   const goToToday = useCallback(() => {
     const nextDate = startOfDay(new Date());
     setCurrentDate(nextDate);
+    setMonthDisplayDate(startOfMonth(nextDate));
     selectDefaultEvent({ nextCurrentDate: nextDate });
   }, [selectDefaultEvent]);
 
@@ -325,14 +339,14 @@ export function ArchiveCalendar({
   }, []);
 
   const returnToDayEvents = useCallback(() => {
-    if (!detailReturnDayDate) {
+    if (!resolvedDetailReturnDayDate) {
       return;
     }
 
-    setSelectedDayDate(detailReturnDayDate);
+    setSelectedDayDate(resolvedDetailReturnDayDate);
     setSelectedEventId(null);
     setRightOpen(true);
-  }, [detailReturnDayDate]);
+  }, [resolvedDetailReturnDayDate]);
 
   const clearSelectedEvent = useCallback((event: MouseEvent<HTMLElement>) => {
     const target = event.target as HTMLElement | null;
@@ -392,6 +406,7 @@ export function ArchiveCalendar({
           <SidebarSearch query={query} searchRef={searchRef} onQueryChange={handleQueryChange} />
           <MiniDatePicker
             currentDate={currentDate}
+            monthDisplayDate={monthDisplayDate}
             events={filteredEvents}
             onNavigateMonth={navigateMonth}
             onSelectDate={selectDayEvents}
@@ -415,7 +430,7 @@ export function ArchiveCalendar({
       <section className={styles.calendarPane} aria-label="群日报日历">
         <CalendarToolbar
           view={view}
-          currentDate={currentDate}
+          displayDate={view === "month" ? monthDisplayDate : currentDate}
           query={query}
           leftOpen={leftOpen}
           rightOpen={rightOpen}
@@ -435,9 +450,11 @@ export function ArchiveCalendar({
           {view === "month" ? (
             <MonthView
               currentDate={currentDate}
+              displayDate={monthDisplayDate}
               events={filteredEvents}
               selectedEventId={selectedEvent?.id}
               onOpenDayEvents={selectDayEvents}
+              onDisplayDateChange={setMonthDisplayDate}
               onSelectEvent={selectEvent}
               onDateSelect={setCurrentDate}
             />
@@ -463,7 +480,7 @@ export function ArchiveCalendar({
           onReturnToDayEvents={returnToDayEvents}
           onSelectEvent={selectEvent}
           reportOverviews={selectedDayReportOverviews}
-          returnDayDate={detailReturnDayDate}
+          returnDayDate={resolvedDetailReturnDayDate}
         />
       </aside>
     </main>
@@ -505,7 +522,7 @@ function SidebarHeader({
 
 function CalendarToolbar({
   view,
-  currentDate,
+  displayDate,
   query,
   leftOpen,
   rightOpen,
@@ -521,7 +538,7 @@ function CalendarToolbar({
   onToggleRight,
 }: {
   view: CalendarViewType;
-  currentDate: Date;
+  displayDate: Date;
   query: string;
   leftOpen: boolean;
   rightOpen: boolean;
@@ -557,7 +574,7 @@ function CalendarToolbar({
           <TooltipContent>{leftOpen ? "收起左侧栏" : "展开左侧栏"}</TooltipContent>
         </Tooltip>
         <div className={styles.toolbarTitle}>
-          <strong>{format(currentDate, "yyyy 年 M 月", { locale: zhCN })}</strong>
+          <strong>{format(displayDate, "yyyy 年 M 月", { locale: zhCN })}</strong>
           <span className={styles.toolbarTitleMeta}>
             显示 {visibleCount} / {totalCount}
           </span>
@@ -680,16 +697,18 @@ function ArchiveViewTabs({
 
 function MiniDatePicker({
   currentDate,
+  monthDisplayDate,
   events,
   onNavigateMonth,
   onSelectDate,
 }: {
   currentDate: Date;
+  monthDisplayDate: Date;
   events: ArchiveCalendarEvent[];
   onNavigateMonth: (direction: -1 | 1) => void;
   onSelectDate: (date: Date) => void;
 }) {
-  const days = useMemo(() => buildMonthDays(currentDate), [currentDate]);
+  const days = useMemo(() => buildMonthDays(monthDisplayDate), [monthDisplayDate]);
   const eventDateKeys = useMemo(() => new Set(events.map((event) => dateKey(event.start))), [events]);
 
   return (
@@ -706,7 +725,7 @@ function MiniDatePicker({
           <ChevronLeft />
         </Button>
         <span className={styles.sectionHeaderTitle}>
-          {format(currentDate, "yyyy 年 M 月", { locale: zhCN })}
+          {format(monthDisplayDate, "yyyy 年 M 月", { locale: zhCN })}
         </span>
         <Button
           aria-label="下个月"
@@ -730,12 +749,10 @@ function MiniDatePicker({
           return (
             <button
               aria-label={`在详情栏查看 ${format(day, "M月d日")} 当天事件`}
-              aria-pressed={isSameDay(day, currentDate)}
               className={[
                 styles.miniDay,
-                isSameMonth(day, currentDate) ? "" : styles.mutedMiniDay,
+                isSameMonth(day, monthDisplayDate) ? "" : styles.mutedMiniDay,
                 isToday(day) ? styles.todayMiniDay : "",
-                isSameDay(day, currentDate) ? styles.selectedMiniDay : "",
                 eventDateKeys.has(key) ? styles.hasMiniEvent : "",
               ]
                 .filter(Boolean)
@@ -875,16 +892,20 @@ function SidebarFilterTabs({
 
 function MonthView({
   currentDate,
+  displayDate,
   events,
   selectedEventId,
   onOpenDayEvents,
+  onDisplayDateChange,
   onSelectEvent,
   onDateSelect,
 }: {
   currentDate: Date;
+  displayDate: Date;
   events: ArchiveCalendarEvent[];
   selectedEventId: string | undefined;
   onOpenDayEvents: (date: Date) => void;
+  onDisplayDateChange: (date: Date) => void;
   onSelectEvent: (event: ArchiveCalendarEvent) => void;
   onDateSelect: (date: Date) => void;
 }) {
@@ -908,6 +929,17 @@ function MonthView({
     [dynamicBuffer, visibleRows],
   );
   const days = useMemo(() => bufferedRows.flat(), [bufferedRows]);
+  const dominantVisibleMonthDate = useMemo(
+    () =>
+      getDominantVisibleMonthDate({
+        visibleRows: bufferedRows,
+        rowHeight: measuredRowHeight,
+        scrollOffset,
+        leadingBufferRows: dynamicBuffer,
+        visibleRowCount: monthVisibleRowCount,
+      }),
+    [bufferedRows, dynamicBuffer, measuredRowHeight, scrollOffset],
+  );
   const monthGridHeightPercent = (bufferedRows.length / monthVisibleRowCount) * 100;
   const bufferedRowOffsetPercent = (dynamicBuffer / bufferedRows.length) * 100;
   const scrollOffsetOperator = scrollOffset >= 0 ? "+" : "-";
@@ -935,6 +967,12 @@ function MonthView({
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    if (!isSameMonth(dominantVisibleMonthDate, displayDate)) {
+      onDisplayDateChange(dominantVisibleMonthDate);
+    }
+  }, [displayDate, dominantVisibleMonthDate, onDisplayDateChange]);
+
   return (
     <div className={styles.monthView}>
       <div className={styles.weekdayRow} aria-hidden="true">
@@ -952,7 +990,7 @@ function MonthView({
               <article
                 className={[
                   styles.monthCell,
-                  isSameMonth(day, currentDate) ? "" : styles.outsideMonth,
+                  isSameMonth(day, displayDate) ? "" : styles.outsideMonth,
                   isToday(day) ? styles.todayCell : "",
                 ]
                   .filter(Boolean)
@@ -1347,7 +1385,6 @@ function DetailPanel({
     return (
       <div className={styles.detailPanel}>
         <div className={styles.detailHeader}>
-          <p className={styles.eyebrow}>Details</p>
           <Button aria-label="收起详情栏" onClick={onClose} size="icon" type="button" variant="ghost">
             <PanelRightClose />
           </Button>
