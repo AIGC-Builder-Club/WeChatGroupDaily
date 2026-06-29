@@ -854,9 +854,21 @@
 }
 
 .selectedEvent {
-  box-shadow:
-    0 0 0 2px var(--background),
-    0 0 0 4px var(--event-ink);
+  border-left-color: transparent;
+  background: var(--event-ink);
+  color: #fff;
+}
+
+.selectedEvent.compactEvent:hover {
+  background: var(--event-ink);
+}
+
+.selectedEvent .monthEventTime {
+  color: #fff;
+}
+
+.selectedEvent .monthEventTopic {
+  color: #fff;
 }
 
 .moreEvents {
