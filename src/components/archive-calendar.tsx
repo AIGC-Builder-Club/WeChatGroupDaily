@@ -128,6 +128,7 @@ export function ArchiveCalendar({
     }),
   );
   const [selectedDayDate, setSelectedDayDate] = useState<Date | null>(null);
+  const [detailReturnDayDate, setDetailReturnDayDate] = useState<Date | null>(null);
   const [query, setQuery] = useState("");
   const [selectedPerson, setSelectedPerson] = useState(initialPerson);
   const [selectedTopic, setSelectedTopic] = useState(initialTopic);
@@ -200,6 +201,7 @@ export function ArchiveCalendar({
       nextView?: CalendarViewType;
     } = {}) => {
       setSelectedDayDate(null);
+      setDetailReturnDayDate(null);
       setSelectedEventId(
         resolveDefaultSelectedEventId({
           currentDate: nextCurrentDate,
@@ -250,7 +252,11 @@ export function ArchiveCalendar({
   }, [currentDate, selectDefaultEvent, view]);
 
   const selectDayEvents = useCallback((date: Date) => {
-    setSelectedDayDate(startOfDay(date));
+    const selectedDate = startOfDay(date);
+
+    setCurrentDate(selectedDate);
+    setSelectedDayDate(selectedDate);
+    setDetailReturnDayDate(null);
     setSelectedEventId(null);
     setRightOpen(true);
   }, []);
@@ -306,9 +312,20 @@ export function ArchiveCalendar({
 
   const selectEvent = useCallback((event: ArchiveCalendarEvent) => {
     setSelectedDayDate(null);
+    setDetailReturnDayDate(startOfDay(event.start));
     setSelectedEventId(event.id);
     setRightOpen(true);
   }, []);
+
+  const returnToDayEvents = useCallback(() => {
+    if (!detailReturnDayDate) {
+      return;
+    }
+
+    setSelectedDayDate(detailReturnDayDate);
+    setSelectedEventId(null);
+    setRightOpen(true);
+  }, [detailReturnDayDate]);
 
   const clearSelectedEvent = useCallback((event: MouseEvent<HTMLElement>) => {
     const target = event.target as HTMLElement | null;
@@ -318,6 +335,7 @@ export function ArchiveCalendar({
 
     setSelectedEventId(null);
     setSelectedDayDate(null);
+    setDetailReturnDayDate(null);
   }, []);
 
   const handleQueryChange = useCallback(
@@ -369,6 +387,7 @@ export function ArchiveCalendar({
             currentDate={currentDate}
             events={filteredEvents}
             onNavigateMonth={navigateMonth}
+            onSelectDate={selectDayEvents}
           />
           <SidebarFilterTabs
             activeTab={activeFilterTab}
@@ -434,7 +453,9 @@ export function ArchiveCalendar({
           dayEvents={selectedDayEvents}
           event={selectedDayDate ? null : selectedEvent}
           onClose={() => setRightOpen(false)}
+          onReturnToDayEvents={returnToDayEvents}
           onSelectEvent={selectEvent}
+          returnDayDate={detailReturnDayDate}
         />
       </aside>
     </main>
@@ -653,10 +674,12 @@ function MiniDatePicker({
   currentDate,
   events,
   onNavigateMonth,
+  onSelectDate,
 }: {
   currentDate: Date;
   events: ArchiveCalendarEvent[];
   onNavigateMonth: (direction: -1 | 1) => void;
+  onSelectDate: (date: Date) => void;
 }) {
   const days = useMemo(() => buildMonthDays(currentDate), [currentDate]);
   const eventDateKeys = useMemo(() => new Set(events.map((event) => dateKey(event.start))), [events]);
@@ -697,19 +720,24 @@ function MiniDatePicker({
         {days.map((day) => {
           const key = dateKey(day);
           return (
-            <span
+            <button
+              aria-label={`在详情栏查看 ${format(day, "M月d日")} 当天事件`}
+              aria-pressed={isSameDay(day, currentDate)}
               className={[
                 styles.miniDay,
                 isSameMonth(day, currentDate) ? "" : styles.mutedMiniDay,
                 isToday(day) ? styles.todayMiniDay : "",
+                isSameDay(day, currentDate) ? styles.selectedMiniDay : "",
                 eventDateKeys.has(key) ? styles.hasMiniEvent : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
               key={key}
+              onClick={() => onSelectDate(day)}
+              type="button"
             >
               {format(day, "d")}
-            </span>
+            </button>
           );
         })}
       </div>
@@ -1089,7 +1117,7 @@ function TimelineView({
                   onSelect={onSelectEvent}
                   style={{
                     top: `${minutesToPercent(item.startMinutes)}%`,
-                    height: `${minutesToPercent(item.durationMinutes)}%`,
+                    height: "var(--timeline-event-card-height)",
                     left: `calc(${item.left}% + 4px)`,
                     width: `calc(${item.width}% - 8px)`,
                     zIndex: item.column + 1,
@@ -1137,7 +1165,7 @@ function TimelineEventCard({
         <span>{formatTimelineEventTime(event, view)}</span>
         {event.meta.topic ? <span className={styles.timelineTopic}>{event.meta.topic}</span> : null}
       </span>
-      <strong>{event.title}</strong>
+      <strong className={styles.timelineEventTitle}>{event.title}</strong>
     </button>
   );
 }
@@ -1225,13 +1253,17 @@ function DetailPanel({
   dayEvents,
   event,
   onClose,
+  onReturnToDayEvents,
   onSelectEvent,
+  returnDayDate,
 }: {
   dayDate: Date | null;
   dayEvents: ArchiveCalendarEvent[];
   event: ArchiveCalendarEvent | null;
   onClose: () => void;
+  onReturnToDayEvents: () => void;
   onSelectEvent: (event: ArchiveCalendarEvent) => void;
+  returnDayDate: Date | null;
 }) {
   if (dayDate) {
     const fullReportHref = dayEvents[0]?.meta.rawHtmlHref;
@@ -1239,8 +1271,9 @@ function DetailPanel({
     return (
       <div className={styles.detailPanel}>
         <div className={styles.detailHeader}>
-          <div>
-            <span>{format(dayDate, "yyyy年M月d日 EEEE", { locale: zhCN })}</span>
+          <div className={styles.detailHeaderTitle}>
+            <div className={styles.detailHeaderBackSlot} />
+            <span>{format(dayDate, "yyyy 年 M 月 d 日 EEEE", { locale: zhCN })}</span>
           </div>
           <Button aria-label="收起详情栏" onClick={onClose} size="icon" type="button" variant="ghost">
             <PanelRightClose />
@@ -1317,7 +1350,28 @@ function DetailPanel({
   return (
     <div className={styles.detailPanel}>
       <div className={styles.detailHeader}>
-        <div>
+        <div className={styles.detailHeaderTitle}>
+          <div
+            className={[
+              styles.detailHeaderBackSlot,
+              returnDayDate ? styles.detailHeaderBackSlotActive : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            {returnDayDate ? (
+              <Button
+                aria-label="返回当天事件"
+                className={styles.detailHeaderBack}
+                onClick={onReturnToDayEvents}
+                size="icon"
+                type="button"
+                variant="ghost"
+              >
+                <ChevronLeft />
+              </Button>
+            ) : null}
+          </div>
           <span>{formatEventDate(event)}</span>
         </div>
         <Button aria-label="收起详情栏" onClick={onClose} size="icon" type="button" variant="ghost">

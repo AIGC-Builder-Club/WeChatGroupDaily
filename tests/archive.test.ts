@@ -24,8 +24,8 @@ const latestFilename = "🦞奇奇怪怪养龙虾群2026-06-24.html";
 const rangedFilename = "🦞奇奇怪怪养龙虾群2026-05-07 → 2026-05-13.html";
 const singleDayFilename = "🦞奇奇怪怪养龙虾群2026-05-25.html";
 const fallbackAvatarFilename = "🦞奇奇怪怪养龙虾群2026-06-21 → 2026-06-23.html";
-const totalReportCount = 29;
-const latestReportSlug = "2026-06-26";
+const totalReportCount = 32;
+const latestReportSlug = "2026-06-29";
 
 describe("archive filename parsing", () => {
   it("parses single-day and ranged report filenames", () => {
