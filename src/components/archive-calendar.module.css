@@ -309,7 +309,17 @@
   border-radius: 6px;
   background: transparent;
   color: var(--foreground);
+  cursor: pointer;
   font-size: 0.78rem;
+}
+
+.miniDay:hover {
+  background: var(--accent);
+}
+
+.miniDay:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 .mutedMiniDay {
@@ -319,6 +329,16 @@
 .todayMiniDay {
   background: var(--primary);
   color: var(--primary-foreground);
+}
+
+.selectedMiniDay {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.todayMiniDay:hover,
+.selectedMiniDay:hover {
+  background: var(--primary);
 }
 
 .hasMiniEvent::after {
@@ -897,6 +917,7 @@
 .timelineView {
   --timeline-axis-width: 4.25rem;
   --timeline-hour-height: 56px;
+  --timeline-event-card-height: 1.75rem;
   display: grid;
   grid-template-columns: var(--timeline-axis-width) minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
@@ -1053,23 +1074,22 @@
   position: absolute;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  gap: 3px;
-  min-height: 50px;
+  gap: 2px;
+  height: var(--timeline-event-card-height);
+  min-height: 0;
   min-width: 0;
   overflow: hidden;
-  padding: 7px 8px 7px 10px;
-  border: 1px solid color-mix(in srgb, var(--event-ink) 36%, transparent);
-  border-left: 4px solid var(--event-ink);
-  border-radius: 7px;
-  background:
-    linear-gradient(color-mix(in srgb, var(--background) 42%, transparent), color-mix(in srgb, var(--background) 42%, transparent)),
-    var(--event-bg);
+  padding: 0.375rem 0.375rem 0.375rem 0.3125rem;
+  border: 0;
+  border-left: 3px solid var(--event-border);
+  border-radius: 2px;
+  background: transparent;
   color: var(--event-ink);
   text-align: left;
 }
 
 .timelineEventCard:hover {
-  box-shadow: 0 5px 16px color-mix(in srgb, var(--event-ink) 16%, transparent);
+  background: var(--accent);
 }
 
 .timelineEventMeta {
@@ -1078,8 +1098,8 @@
   gap: 5px;
   min-width: 0;
   color: color-mix(in srgb, var(--event-ink) 84%, var(--foreground));
-  font-size: 0.66rem;
-  font-weight: 800;
+  font-size: 0.6875rem;
+  font-weight: 400;
   line-height: 1;
 }
 
@@ -1093,19 +1113,36 @@
   white-space: nowrap;
 }
 
-.timelineEventCard strong {
+.timelineEventTitle {
+  display: -webkit-box;
   min-width: 0;
   overflow: hidden;
   color: var(--foreground);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
+  font-weight: 700;
   line-height: 1.2;
   text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .selectedTimelineEvent {
-  box-shadow:
-    0 0 0 2px var(--background),
-    0 0 0 4px var(--event-ink);
+  background: var(--event-ink);
+  color: #fff;
+}
+
+.selectedTimelineEvent:hover {
+  background: var(--event-ink);
+}
+
+.selectedTimelineEvent .timelineEventMeta,
+.selectedTimelineEvent .timelineEventTitle {
+  color: #fff;
+}
+
+.selectedTimelineEvent .timelineTopic {
+  background: color-mix(in srgb, #fff 18%, transparent);
+  color: #fff;
 }
 
 .detailPanel {
@@ -1131,6 +1168,35 @@
   font-size: 0.68rem;
 }
 
+.detailHeaderTitle {
+  display: grid;
+  align-items: center;
+  grid-template-columns: 1.75rem minmax(0, 1fr);
+  gap: 4px;
+  min-width: 0;
+}
+
+.detailHeaderBackSlot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.detailHeaderBackSlotActive {
+  pointer-events: auto;
+}
+
+.detailHeaderBack {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: 0 0 auto;
+}
+
 .detailScroll {
   min-width: 0;
   overflow: auto;
@@ -1145,35 +1211,34 @@
 
 .detailDayEvents {
   display: grid;
-  gap: 10px;
+  gap: 6px;
   margin-top: 16px;
 }
 
 .detailDayEvent {
   display: grid;
-  gap: 7px;
+  gap: 5px;
   width: 100%;
   min-width: 0;
-  padding: 10px 11px;
-  border: 1px solid color-mix(in srgb, var(--event-ink) 34%, transparent);
-  border-left: 4px solid var(--event-ink);
-  border-radius: 7px;
-  background:
-    linear-gradient(color-mix(in srgb, var(--background) 48%, transparent), color-mix(in srgb, var(--background) 48%, transparent)),
-    var(--event-bg);
+  padding: 0.5rem 0.5rem 0.5rem 0.375rem;
+  border: 0;
+  border-left: 3px solid var(--event-border);
+  border-radius: 2px;
+  background: transparent;
   color: var(--foreground);
   text-align: left;
 }
 
 .detailDayEvent:hover {
-  border-color: color-mix(in srgb, var(--event-ink) 56%, transparent);
+  background: var(--accent);
 }
 
 .detailDayEvent strong {
   min-width: 0;
   overflow: hidden;
-  font-size: 0.88rem;
-  line-height: 1.25;
+  color: var(--event-title-ink);
+  font-size: 0.82rem;
+  line-height: 1.22;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1182,9 +1247,9 @@
   display: -webkit-box;
   margin: 0;
   overflow: hidden;
-  color: color-mix(in srgb, var(--foreground) 76%, transparent);
+  color: color-mix(in srgb, var(--foreground) 70%, transparent);
   font-size: 0.78rem;
-  line-height: 1.5;
+  line-height: 1.42;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
