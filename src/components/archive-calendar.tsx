@@ -54,6 +54,10 @@ import {
 } from "@/components/ui/tooltip";
 import type { ReportAvatar, ReportMeta } from "@/lib/archive";
 import {
+  getReportOverviewsForDay,
+  type DayReportOverview,
+} from "@/lib/archive-report-overviews";
+import {
   formatArchiveEventTime,
   toArchiveCalendarEvents,
   type ArchiveCalendarEvent,
@@ -114,6 +118,7 @@ export function ArchiveCalendar({
   initialTopic = "",
 }: ArchiveCalendarProps) {
   const events = useMemo(() => toArchiveCalendarEvents(reports), [reports]);
+  const reportOverviewsByDay = useMemo(() => getReportOverviewsForDay(reports), [reports]);
   const initialCurrentDate = useMemo(() => getLatestEventDate(events), [events]);
   const [view, setView] = useState<CalendarViewType>("month");
   const [currentDate, setCurrentDate] = useState(() => initialCurrentDate);
@@ -181,6 +186,9 @@ export function ArchiveCalendar({
 
     return filteredEvents.filter((event) => isSameDay(event.start, selectedDayDate));
   }, [filteredEvents, selectedDayDate]);
+  const selectedDayReportOverviews = selectedDayDate
+    ? (reportOverviewsByDay.get(dateKey(selectedDayDate)) ?? [])
+    : [];
   const totalMessages = useMemo(
     () => reports.reduce((sum, report) => sum + (report.stats.messages ?? 0), 0),
     [reports],
@@ -254,7 +262,6 @@ export function ArchiveCalendar({
   const selectDayEvents = useCallback((date: Date) => {
     const selectedDate = startOfDay(date);
 
-    setCurrentDate(selectedDate);
     setSelectedDayDate(selectedDate);
     setDetailReturnDayDate(null);
     setSelectedEventId(null);
@@ -455,6 +462,7 @@ export function ArchiveCalendar({
           onClose={() => setRightOpen(false)}
           onReturnToDayEvents={returnToDayEvents}
           onSelectEvent={selectEvent}
+          reportOverviews={selectedDayReportOverviews}
           returnDayDate={detailReturnDayDate}
         />
       </aside>
@@ -1255,6 +1263,7 @@ function DetailPanel({
   onClose,
   onReturnToDayEvents,
   onSelectEvent,
+  reportOverviews,
   returnDayDate,
 }: {
   dayDate: Date | null;
@@ -1263,10 +1272,11 @@ function DetailPanel({
   onClose: () => void;
   onReturnToDayEvents: () => void;
   onSelectEvent: (event: ArchiveCalendarEvent) => void;
+  reportOverviews: DayReportOverview[];
   returnDayDate: Date | null;
 }) {
   if (dayDate) {
-    const fullReportHref = dayEvents[0]?.meta.rawHtmlHref;
+    const fullReportHref = reportOverviews[0]?.rawHtmlHref ?? dayEvents[0]?.meta.rawHtmlHref;
 
     return (
       <div className={styles.detailPanel}>
@@ -1287,6 +1297,9 @@ function DetailPanel({
               {dayEvents.length} 条故事
             </span>
           </div>
+          {reportOverviews.map((overview) => (
+            <ArchiveDayReportOverview key={overview.slug} overview={overview} />
+          ))}
           {dayEvents.length > 0 ? (
             <div className={styles.detailDayEvents}>
               {dayEvents.map((dayEvent) => (
@@ -1428,9 +1441,38 @@ function DetailPanel({
   );
 }
 
+function ArchiveDayReportOverview({ overview }: { overview: DayReportOverview }) {
+  return (
+    <div className={styles.reportOverview}>
+      <section className={styles.reportSummary} aria-label="今日总结">
+        <span>今日总结</span>
+        <h3>{overview.title}</h3>
+        <p>{overview.leadText}</p>
+      </section>
+      {overview.highlights.length > 0 ? (
+        <section className={styles.reportHighlights} aria-label="今日高光">
+          <span>今日高光</span>
+          <div>
+            {overview.highlights.map((highlight) => (
+              <div className={styles.reportHighlightRow} key={`${overview.slug}-${highlight.name}`}>
+                <AvatarBadge avatar={highlight} />
+                <div>
+                  <strong>{highlight.name}</strong>
+                  {highlight.tag ? <em>{highlight.tag}</em> : null}
+                  {highlight.desc ? <p>{highlight.desc}</p> : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
 function AvatarBadge({ avatar }: { avatar: ReportAvatar }) {
   return (
-    <Avatar>
+    <Avatar className="rounded-md">
       {avatar.avatarSrc ? <AvatarImage alt={avatar.avatarAlt ?? avatar.name} src={avatar.avatarSrc} /> : null}
       <AvatarFallback>{avatar.avatarInitials}</AvatarFallback>
     </Avatar>
