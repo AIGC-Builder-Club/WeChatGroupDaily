@@ -139,6 +139,21 @@ describe("archive calendar UI layout contract", () => {
     expect(monthEventTopicStyles).toContain("font-weight: 700");
   });
 
+  it("fills selected month cards with their event color and white text", () => {
+    const selectedEventStyles = getStyleBlock(".selectedEvent");
+    const selectedEventHoverStyles = getStyleBlock(".selectedEvent.compactEvent:hover");
+    const selectedEventTimeStyles = getStyleBlock(".selectedEvent .monthEventTime");
+    const selectedEventTopicStyles = getStyleBlock(".selectedEvent .monthEventTopic");
+
+    expect(selectedEventStyles).toContain("background: var(--event-ink)");
+    expect(selectedEventStyles).toContain("color: #fff");
+    expect(selectedEventStyles).toContain("border-left-color: transparent");
+    expect(selectedEventStyles).not.toContain("box-shadow");
+    expect(selectedEventHoverStyles).toContain("background: var(--event-ink)");
+    expect(selectedEventTimeStyles).toContain("color: #fff");
+    expect(selectedEventTopicStyles).toContain("color: #fff");
+  });
+
   it("adds month switching controls to the sidebar mini calendar header", () => {
     const miniDatePicker = getFunctionSource("MiniDatePicker");
     const sectionHeader = getStyleBlock(".sectionHeader");
