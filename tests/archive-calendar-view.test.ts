@@ -5,6 +5,8 @@ import {
   getDefaultSelectedEventId,
   getResolvedSelectedEventId,
   getDefaultViewDate,
+  getDefaultMobileDayDate,
+  getLatestEventDayDate,
 } from "../src/lib/archive-calendar-view";
 
 describe("archive calendar view defaults", () => {
@@ -139,6 +141,58 @@ describe("archive calendar view defaults", () => {
         selectedEventId: null,
       }),
     ).toBeNull();
+  });
+
+  it("defaults the mobile day reader to today when today has data", () => {
+    const events = [
+      makeEvent("older", new Date(2026, 5, 24, 9, 0)),
+      makeEvent("today", new Date(2026, 5, 26, 16, 44)),
+    ];
+
+    const day = getDefaultMobileDayDate({ events, now });
+
+    expect(day?.getFullYear()).toBe(2026);
+    expect(day?.getMonth()).toBe(5);
+    expect(day?.getDate()).toBe(26);
+    expect(day?.getHours()).toBe(0);
+    expect(day?.getMinutes()).toBe(0);
+  });
+
+  it("falls back to the latest data day for mobile when today has no data", () => {
+    const events = [
+      makeEvent("older", new Date(2026, 5, 24, 9, 0)),
+      makeEvent("latest-morning", new Date(2026, 6, 1, 9, 30)),
+      makeEvent("latest-evening", new Date(2026, 6, 1, 21, 15)),
+    ];
+
+    const day = getDefaultMobileDayDate({ events, now });
+
+    expect(day?.getFullYear()).toBe(2026);
+    expect(day?.getMonth()).toBe(6);
+    expect(day?.getDate()).toBe(1);
+    expect(day?.getHours()).toBe(0);
+    expect(day?.getMinutes()).toBe(0);
+  });
+
+  it("returns null for the mobile day reader when there are no events", () => {
+    expect(getDefaultMobileDayDate({ events: [], now })).toBeNull();
+  });
+
+  it("defaults desktop entry details to the latest data day without selecting an event", () => {
+    const events = [
+      makeEvent("older", new Date(2026, 5, 24, 9, 0)),
+      makeEvent("today", new Date(2026, 5, 26, 16, 44)),
+      makeEvent("latest-morning", new Date(2026, 6, 1, 9, 30)),
+      makeEvent("latest-evening", new Date(2026, 6, 1, 21, 15)),
+    ];
+
+    const day = getLatestEventDayDate({ events });
+
+    expect(day?.getFullYear()).toBe(2026);
+    expect(day?.getMonth()).toBe(6);
+    expect(day?.getDate()).toBe(1);
+    expect(day?.getHours()).toBe(0);
+    expect(day?.getMinutes()).toBe(0);
   });
 });
 

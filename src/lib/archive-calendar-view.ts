@@ -22,6 +22,15 @@ type ResolvedSelectedEventIdArgs = {
   selectedEventId: string | null;
 };
 
+type DefaultMobileDayDateArgs = {
+  events: ArchiveCalendarEvent[];
+  now?: Date;
+};
+
+type LatestEventDayDateArgs = {
+  events: ArchiveCalendarEvent[];
+};
+
 export function getDefaultViewDate(
   fromView: CalendarViewType,
   toView: CalendarViewType,
@@ -74,6 +83,42 @@ export function getResolvedSelectedEventId({
   }
 
   return defaultSelectedEventId;
+}
+
+export function getDefaultMobileDayDate({
+  events,
+  now = new Date(),
+}: DefaultMobileDayDateArgs): Date | null {
+  if (events.length === 0) {
+    return null;
+  }
+
+  const today = startOfDay(now);
+  if (events.some((event) => isSameDay(event.start, today))) {
+    return today;
+  }
+
+  const latestTime = events.reduce(
+    (latest, event) => Math.max(latest, event.start.getTime()),
+    0,
+  );
+
+  return latestTime ? startOfDay(new Date(latestTime)) : null;
+}
+
+export function getLatestEventDayDate({
+  events,
+}: LatestEventDayDateArgs): Date | null {
+  if (events.length === 0) {
+    return null;
+  }
+
+  const latestTime = events.reduce(
+    (latest, event) => Math.max(latest, event.start.getTime()),
+    0,
+  );
+
+  return latestTime ? startOfDay(new Date(latestTime)) : null;
 }
 
 function isTodayVisible(currentDate: Date, now: Date, view: CalendarViewType): boolean {

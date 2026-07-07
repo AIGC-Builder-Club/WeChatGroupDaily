@@ -66,8 +66,10 @@ import {
 } from "@/lib/archive-calendar-events";
 import { getDominantVisibleMonthDate } from "@/lib/archive-calendar-month";
 import {
+  getDefaultMobileDayDate,
   getDefaultSelectedEventId,
   getDefaultViewDate,
+  getLatestEventDayDate,
   getResolvedSelectedEventId,
 } from "@/lib/archive-calendar-view";
 import {
@@ -96,18 +98,21 @@ type TopicSummary = {
 };
 
 type SidebarFilterTab = "people" | "topic";
+type CalendarWorkspaceTab = "calendar" | "relationships";
 
 const weekdayLabels = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 const viewOptions: Array<{
-  value: CalendarViewType;
+  value: CalendarWorkspaceTab;
   label: string;
 }> = [
-  { value: "day", label: "日" },
-  { value: "week", label: "周" },
-  { value: "month", label: "月" },
+  { value: "calendar", label: "日历" },
+  { value: "relationships", label: "关系" },
 ];
 const monthVisibleRowCount = 6;
 const monthBaseBufferRows = 2;
+const monthCompactEventHeight = 20;
+const monthCompactEventGap = 4;
+const monthCellChromeHeight = 43;
 const timelineBufferDays: Record<"day" | "week", number> = {
   day: 3,
   week: 7,
@@ -122,20 +127,22 @@ export function ArchiveCalendar({
   const events = useMemo(() => toArchiveCalendarEvents(reports), [reports]);
   const reportOverviewsByDay = useMemo(() => getReportOverviewsForDay(reports), [reports]);
   const initialCurrentDate = useMemo(() => getLatestEventDate(events), [events]);
+  const initialFilteredEvents = useMemo(
+    () =>
+      events.filter((event) =>
+        matchesFilters(event, initialPerson, initialTopic, ""),
+      ),
+    [events, initialPerson, initialTopic],
+  );
+  const initialSelectedDayDate = useMemo(
+    () => getLatestEventDayDate({ events: initialFilteredEvents }),
+    [initialFilteredEvents],
+  );
   const [view, setView] = useState<CalendarViewType>("month");
   const [currentDate, setCurrentDate] = useState(() => startOfMonth(initialCurrentDate));
   const [monthDisplayDate, setMonthDisplayDate] = useState(() => startOfMonth(initialCurrentDate));
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(() =>
-    resolveDefaultSelectedEventId({
-      currentDate: initialCurrentDate,
-      events,
-      normalizedQuery: "",
-      selectedPerson: initialPerson,
-      selectedTopic: initialTopic,
-      view: "month",
-    }),
-  );
-  const [selectedDayDate, setSelectedDayDate] = useState<Date | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedDayDate, setSelectedDayDate] = useState<Date | null>(() => initialSelectedDayDate);
   const [detailReturnDayDate, setDetailReturnDayDate] = useState<Date | null>(null);
   const [query, setQuery] = useState("");
   const [selectedPerson, setSelectedPerson] = useState(initialPerson);
@@ -143,9 +150,23 @@ export function ArchiveCalendar({
   const [activeFilterTab, setActiveFilterTab] = useState<SidebarFilterTab>(() =>
     initialTopic ? "topic" : "people",
   );
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<CalendarWorkspaceTab>("calendar");
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
   const searchRef = useRef<HTMLInputElement>(null);
+  const initialMobileDayDate = useMemo(
+    () =>
+      getDefaultMobileDayDate({
+        events: initialFilteredEvents,
+      }),
+    [initialFilteredEvents],
+  );
+  const [mobileDayDate, setMobileDayDate] = useState<Date | null>(() => initialMobileDayDate);
+  const [mobileSelectedEventId, setMobileSelectedEventId] = useState<string | null>(null);
+  const [mobileCalendarOpen, setMobileCalendarOpen] = useState(false);
+  const [mobileMonthDisplayDate, setMobileMonthDisplayDate] = useState(() =>
+    startOfMonth(initialMobileDayDate ?? initialCurrentDate),
+  );
 
   const people = useMemo(() => buildPeopleSummaries(events), [events]);
   const topics = useMemo(() => buildTopicSummaries(events), [events]);
@@ -209,6 +230,50 @@ export function ArchiveCalendar({
   const selectedDayReportOverviews = selectedDayDate
     ? (reportOverviewsByDay.get(dateKey(selectedDayDate)) ?? [])
     : [];
+  const mobileDefaultDayDate = useMemo(
+    () => getDefaultMobileDayDate({ events: filteredEvents }),
+    [filteredEvents],
+  );
+  const resolvedMobileDayDate =
+    mobileDayDate &&
+    filteredEvents.some((event) => isSameDay(event.start, mobileDayDate))
+      ? mobileDayDate
+      : mobileDefaultDayDate;
+  const mobileDayEvents = useMemo(() => {
+    if (!resolvedMobileDayDate) {
+      return [];
+    }
+
+    return filteredEvents.filter((event) => isSameDay(event.start, resolvedMobileDayDate));
+  }, [filteredEvents, resolvedMobileDayDate]);
+  const mobileDayReportOverviews = resolvedMobileDayDate
+    ? (reportOverviewsByDay.get(dateKey(resolvedMobileDayDate)) ?? [])
+    : [];
+  const mobileSelectedEvent = useMemo(() => {
+    const event = filteredEvents.find((candidate) => candidate.id === mobileSelectedEventId);
+
+    if (!event || !resolvedMobileDayDate || !isSameDay(event.start, resolvedMobileDayDate)) {
+      return null;
+    }
+
+    return event;
+  }, [filteredEvents, mobileSelectedEventId, resolvedMobileDayDate]);
+  const mobileSelectedEventDayEvents = useMemo(() => {
+    if (!mobileSelectedEvent) {
+      return [];
+    }
+
+    return filteredEvents
+      .filter((event) => isSameDay(event.start, mobileSelectedEvent.start))
+      .sort(compareEventsAscending);
+  }, [filteredEvents, mobileSelectedEvent]);
+  const mobileSelectedEventDayIndex = mobileSelectedEvent
+    ? mobileSelectedEventDayEvents.findIndex((event) => event.id === mobileSelectedEvent.id)
+    : -1;
+  const previousMobileSelectedDayEvent =
+    mobileSelectedEventDayIndex > 0 ? mobileSelectedEventDayEvents[mobileSelectedEventDayIndex - 1] : null;
+  const nextMobileSelectedDayEvent =
+    mobileSelectedEventDayIndex >= 0 ? (mobileSelectedEventDayEvents[mobileSelectedEventDayIndex + 1] ?? null) : null;
   const totalMessages = useMemo(
     () => reports.reduce((sum, report) => sum + (report.stats.messages ?? 0), 0),
     [reports],
@@ -243,6 +308,31 @@ export function ArchiveCalendar({
     },
     [currentDate, events, query, selectedPerson, selectedTopic, view],
   );
+  const selectMobileDay = useCallback((date: Date) => {
+    const selectedDate = startOfDay(date);
+
+    setMobileDayDate(selectedDate);
+    setMobileMonthDisplayDate(startOfMonth(selectedDate));
+    setMobileSelectedEventId(null);
+    setMobileCalendarOpen(false);
+  }, []);
+  const selectMobileEvent = useCallback((event: ArchiveCalendarEvent) => {
+    setMobileDayDate(startOfDay(event.start));
+    setMobileSelectedEventId(event.id);
+  }, []);
+  const returnToMobileDayEvents = useCallback(() => {
+    setMobileSelectedEventId(null);
+  }, []);
+  const navigateMobileMonth = useCallback((direction: -1 | 1) => {
+    setMobileMonthDisplayDate((displayDate) => addMonths(displayDate, direction));
+  }, []);
+  const toggleMobileCalendar = useCallback(() => {
+    if (!mobileCalendarOpen && resolvedMobileDayDate) {
+      setMobileMonthDisplayDate(startOfMonth(resolvedMobileDayDate));
+    }
+
+    setMobileCalendarOpen((open) => !open);
+  }, [mobileCalendarOpen, resolvedMobileDayDate]);
   const changeView = useCallback(
     (nextView: CalendarViewType) => {
       const nextDate = getDefaultViewDate(view, nextView) ?? currentDate;
@@ -335,9 +425,10 @@ export function ArchiveCalendar({
         event.preventDefault();
         navigate(1);
       }
-      if (event.key.toLowerCase() === "m") changeView("month");
-      if (event.key.toLowerCase() === "w") changeView("week");
-      if (event.key.toLowerCase() === "d") changeView("day");
+      if (event.key.toLowerCase() === "m") {
+        setActiveWorkspaceTab("calendar");
+        changeView("month");
+      }
       if (event.key.toLowerCase() === "t") {
         event.preventDefault();
         goToToday();
@@ -413,6 +504,34 @@ export function ArchiveCalendar({
 
   return (
     <main className={styles.appShell}>
+      <section className={styles.mobileDailyPane} aria-label="移动端日报阅读">
+        <MobileDailyNavigator
+          calendarOpen={mobileCalendarOpen}
+          dayDate={resolvedMobileDayDate}
+          events={filteredEvents}
+          monthDisplayDate={mobileMonthDisplayDate}
+          onNavigateMonth={navigateMobileMonth}
+          onSelectDate={selectMobileDay}
+          onToggleCalendar={toggleMobileCalendar}
+        />
+        <div className={styles.mobileDailyPanel}>
+          <DetailPanel
+            dayDate={mobileSelectedEvent ? null : resolvedMobileDayDate}
+            dayEvents={mobileDayEvents}
+            event={mobileSelectedEvent}
+            people={people}
+            onClose={returnToMobileDayEvents}
+            onReturnToDayEvents={returnToMobileDayEvents}
+            onSelectEvent={selectMobileEvent}
+            previousEvent={previousMobileSelectedDayEvent}
+            nextEvent={nextMobileSelectedDayEvent}
+            reportOverviews={mobileDayReportOverviews}
+            returnDayDate={mobileSelectedEvent ? resolvedMobileDayDate : null}
+            showClose={false}
+          />
+        </div>
+      </section>
+
       <div
         className={styles.leftSidebarFrame}
         data-state={leftOpen ? "expanded" : "collapsed"}
@@ -446,7 +565,7 @@ export function ArchiveCalendar({
 
       <section className={styles.calendarPane} aria-label="群日报日历">
         <CalendarToolbar
-          view={view}
+          activeTab={activeWorkspaceTab}
           displayDate={view === "month" ? monthDisplayDate : currentDate}
           query={query}
           leftOpen={leftOpen}
@@ -457,14 +576,16 @@ export function ArchiveCalendar({
           selectedTopic={selectedTopic}
           onToday={goToToday}
           onNavigateMonth={navigateMonth}
-          onViewChange={changeView}
+          onTabChange={setActiveWorkspaceTab}
           onClearFilters={clearFilters}
           onToggleLeft={() => setLeftOpen((open) => !open)}
           onToggleRight={() => setRightOpen((open) => !open)}
         />
 
         <div className={styles.calendarSurface} onClick={clearSelectedEvent}>
-          {view === "month" ? (
+          {activeWorkspaceTab === "relationships" ? (
+            <RelationshipViewPlaceholder />
+          ) : view === "month" ? (
             <MonthView
               currentDate={currentDate}
               displayDate={monthDisplayDate}
@@ -488,7 +609,10 @@ export function ArchiveCalendar({
         </div>
       </section>
 
-      <aside className={[styles.rightSidebar, rightOpen ? "" : styles.sidebarClosed].join(" ")}>
+      <aside
+        aria-hidden={!rightOpen}
+        className={[styles.rightSidebar, rightOpen ? "" : styles.sidebarClosed].join(" ")}
+      >
         <DetailPanel
           dayDate={selectedDayDate}
           dayEvents={selectedDayEvents}
@@ -541,7 +665,7 @@ function SidebarHeader({
 }
 
 function CalendarToolbar({
-  view,
+  activeTab,
   displayDate,
   query,
   leftOpen,
@@ -552,12 +676,12 @@ function CalendarToolbar({
   selectedTopic,
   onToday,
   onNavigateMonth,
-  onViewChange,
+  onTabChange,
   onClearFilters,
   onToggleLeft,
   onToggleRight,
 }: {
-  view: CalendarViewType;
+  activeTab: CalendarWorkspaceTab;
   displayDate: Date;
   query: string;
   leftOpen: boolean;
@@ -568,7 +692,7 @@ function CalendarToolbar({
   selectedTopic: string;
   onToday: () => void;
   onNavigateMonth: (direction: -1 | 1) => void;
-  onViewChange: (view: CalendarViewType) => void;
+  onTabChange: (tab: CalendarWorkspaceTab) => void;
   onClearFilters: () => void;
   onToggleLeft: () => void;
   onToggleRight: () => void;
@@ -602,7 +726,7 @@ function CalendarToolbar({
       </div>
 
       <div className={styles.toolbarCenter}>
-        <ArchiveViewTabs view={view} onViewChange={onViewChange} />
+        <ArchiveViewTabs activeTab={activeTab} onTabChange={onTabChange} />
       </div>
 
       <div className={styles.toolbarRight}>
@@ -667,16 +791,16 @@ function CalendarToolbar({
 }
 
 function ArchiveViewTabs({
-  view,
-  onViewChange,
+  activeTab,
+  onTabChange,
 }: {
-  view: CalendarViewType;
-  onViewChange: (view: CalendarViewType) => void;
+  activeTab: CalendarWorkspaceTab;
+  onTabChange: (tab: CalendarWorkspaceTab) => void;
 }) {
-  const selectAdjacentView = (direction: -1 | 1) => {
-    const currentIndex = viewOptions.findIndex((option) => option.value === view);
+  const selectAdjacentTab = (direction: -1 | 1) => {
+    const currentIndex = viewOptions.findIndex((option) => option.value === activeTab);
     const nextIndex = (currentIndex + direction + viewOptions.length) % viewOptions.length;
-    onViewChange(viewOptions[nextIndex].value);
+    onTabChange(viewOptions[nextIndex].value);
   };
 
   return (
@@ -686,26 +810,26 @@ function ArchiveViewTabs({
       onKeyDown={(event) => {
         if (event.key === "ArrowLeft") {
           event.preventDefault();
-          selectAdjacentView(-1);
+          selectAdjacentTab(-1);
         }
         if (event.key === "ArrowRight") {
           event.preventDefault();
-          selectAdjacentView(1);
+          selectAdjacentTab(1);
         }
       }}
       role="tablist"
     >
       {viewOptions.map((option) => (
         <button
-          aria-selected={view === option.value}
+          aria-selected={activeTab === option.value}
           className={cn(
             styles.viewTab,
-            view === option.value ? styles.activeViewTab : "",
+            activeTab === option.value ? styles.activeViewTab : "",
           )}
           key={option.value}
-          onClick={() => onViewChange(option.value)}
+          onClick={() => onTabChange(option.value)}
           role="tab"
-          tabIndex={view === option.value ? 0 : -1}
+          tabIndex={activeTab === option.value ? 0 : -1}
           type="button"
         >
           {option.label}
@@ -715,21 +839,120 @@ function ArchiveViewTabs({
   );
 }
 
+function RelationshipViewPlaceholder() {
+  return (
+    <section className={styles.relationshipPlaceholder} aria-label="关系视图">
+      <div className={styles.relationshipPlaceholderContent}>
+        <UsersRound aria-hidden="true" />
+        <strong>关系</strong>
+        <span>暂无数据</span>
+      </div>
+    </section>
+  );
+}
+
+function MobileDailyNavigator({
+  calendarOpen,
+  dayDate,
+  events,
+  monthDisplayDate,
+  onNavigateMonth,
+  onSelectDate,
+  onToggleCalendar,
+}: {
+  calendarOpen: boolean;
+  dayDate: Date | null;
+  events: ArchiveCalendarEvent[];
+  monthDisplayDate: Date;
+  onNavigateMonth: (direction: -1 | 1) => void;
+  onSelectDate: (date: Date) => void;
+  onToggleCalendar: () => void;
+}) {
+  const availableDays = useMemo(() => getAvailableMobileDayDates(events), [events]);
+  const previousDay = selectAdjacentMobileDay(availableDays, dayDate, -1);
+  const nextDay = selectAdjacentMobileDay(availableDays, dayDate, 1);
+
+  return (
+    <nav className={styles.mobileDailyNav} aria-label="日报日期切换">
+      <Button
+        aria-label="上一篇日报"
+        className={styles.mobileDailyNavButton}
+        disabled={!previousDay}
+        onClick={() => previousDay && onSelectDate(previousDay)}
+        size="icon"
+        type="button"
+        variant="secondary"
+      >
+        <ChevronLeft />
+      </Button>
+      <div className={styles.mobileDailyNavCenter}>
+        <button
+          aria-controls="mobile-daily-calendar"
+          aria-expanded={calendarOpen}
+          aria-label="打开日报日期日历"
+          className={styles.mobileDailyNavTitle}
+          onClick={onToggleCalendar}
+          type="button"
+        >
+          <span>奇奇怪怪养龙虾群日报</span>
+          <strong>
+            {dayDate ? format(dayDate, "M 月 d 日 EEEE", { locale: zhCN }) : "暂无日报"}
+          </strong>
+        </button>
+        {calendarOpen ? (
+          <div
+            aria-label="移动端日报日期日历"
+            className={styles.mobileCalendarPopover}
+            id="mobile-daily-calendar"
+            role="dialog"
+          >
+            <MiniDatePicker
+              currentDate={dayDate ?? monthDisplayDate}
+              events={events}
+              monthDisplayDate={monthDisplayDate}
+              onNavigateMonth={onNavigateMonth}
+              onSelectDate={onSelectDate}
+              selectOnlyEventDays
+            />
+          </div>
+        ) : null}
+      </div>
+      <Button
+        aria-label="下一篇日报"
+        className={styles.mobileDailyNavButton}
+        disabled={!nextDay}
+        onClick={() => nextDay && onSelectDate(nextDay)}
+        size="icon"
+        type="button"
+        variant="secondary"
+      >
+        <ChevronRight />
+      </Button>
+    </nav>
+  );
+}
+
 function MiniDatePicker({
   currentDate,
   monthDisplayDate,
   events,
   onNavigateMonth,
   onSelectDate,
+  selectOnlyEventDays = false,
 }: {
   currentDate: Date;
   monthDisplayDate: Date;
   events: ArchiveCalendarEvent[];
   onNavigateMonth: (direction: -1 | 1) => void;
   onSelectDate: (date: Date) => void;
+  selectOnlyEventDays?: boolean;
 }) {
   const days = useMemo(() => buildMonthDays(monthDisplayDate), [monthDisplayDate]);
-  const eventDateKeys = useMemo(() => new Set(events.map((event) => dateKey(event.start))), [events]);
+  const eventCountsByDay = useMemo(() => countEventsByDate(events), [events]);
+  const maxMiniDayEventCount = Math.max(
+    1,
+    ...days.map((day) => eventCountsByDay.get(dateKey(day)) ?? 0),
+  );
 
   return (
     <section className={styles.sidebarSection} aria-label="月份概览">
@@ -766,19 +989,30 @@ function MiniDatePicker({
       <div className={styles.miniGrid}>
         {days.map((day) => {
           const key = dateKey(day);
+          const eventCount = eventCountsByDay.get(key) ?? 0;
+          const heatLevel = getHeatmapLevel(eventCount, maxMiniDayEventCount);
+          const hasEvent = eventCount > 0;
+          const disabled = selectOnlyEventDays && !hasEvent;
           return (
             <button
-              aria-label={`在详情栏查看 ${format(day, "M月d日")} 当天事件`}
+              aria-label={
+                disabled
+                  ? `${format(day, "M月d日")} 暂无日报`
+                  : `在详情栏查看 ${format(day, "M月d日")} 当天事件`
+              }
               className={[
                 styles.miniDay,
                 isSameMonth(day, monthDisplayDate) ? "" : styles.mutedMiniDay,
                 isToday(day) ? styles.todayMiniDay : "",
-                eventDateKeys.has(key) ? styles.hasMiniEvent : "",
+                disabled ? styles.disabledMiniDay : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
+              data-heat-level={heatLevel}
+              disabled={disabled}
               key={key}
               onClick={() => onSelectDate(day)}
+              title={`${format(day, "M月d日")} · ${eventCount} 条`}
               type="button"
             >
               {format(day, "d")}
@@ -1004,7 +1238,8 @@ function MonthView({
         <div className={styles.monthGridContent} style={scrollStyle}>
           {days.map((day) => {
             const dayEvents = events.filter((event) => isSameDay(event.start, day)).sort(compareEventsAscending);
-            const visibleDayEvents = dayEvents.slice(0, 3);
+            const visibleDayEventLimit = getVisibleMonthEventLimit(measuredRowHeight, dayEvents.length);
+            const visibleDayEvents = dayEvents.slice(0, visibleDayEventLimit);
             const hiddenDayEventCount = dayEvents.length - visibleDayEvents.length;
             return (
               <article
@@ -1040,7 +1275,7 @@ function MonthView({
                       compact
                     />
                   ))}
-                  {dayEvents.length > 3 ? (
+                  {hiddenDayEventCount > 0 ? (
                     <button
                       aria-label={`${format(day, "M月d日")} 还有 ${hiddenDayEventCount} 条事件，在详情栏查看当天事件`}
                       className={styles.moreEvents}
@@ -1326,6 +1561,7 @@ function DetailPanel({
   nextEvent,
   reportOverviews,
   returnDayDate,
+  showClose = true,
 }: {
   dayDate: Date | null;
   dayEvents: ArchiveCalendarEvent[];
@@ -1338,6 +1574,7 @@ function DetailPanel({
   nextEvent: ArchiveCalendarEvent | null;
   reportOverviews: DayReportOverview[];
   returnDayDate: Date | null;
+  showClose?: boolean;
 }) {
   if (dayDate) {
     const fullReportHref = reportOverviews[0]?.rawHtmlHref ?? dayEvents[0]?.meta.rawHtmlHref;
@@ -1349,9 +1586,11 @@ function DetailPanel({
             <div className={styles.detailHeaderBackSlot} />
             <span>{format(dayDate, "yyyy 年 M 月 d 日 EEEE", { locale: zhCN })}</span>
           </div>
-          <Button aria-label="收起详情栏" onClick={onClose} size="icon" type="button" variant="ghost">
-            <PanelRightClose />
-          </Button>
+          {showClose ? (
+            <Button aria-label="收起详情栏" onClick={onClose} size="icon" type="button" variant="ghost">
+              <PanelRightClose />
+            </Button>
+          ) : null}
         </div>
         <div className={styles.detailScroll}>
           <h2>当天事件</h2>
@@ -1411,9 +1650,11 @@ function DetailPanel({
     return (
       <div className={styles.detailPanel}>
         <div className={styles.detailHeader}>
-          <Button aria-label="收起详情栏" onClick={onClose} size="icon" type="button" variant="ghost">
-            <PanelRightClose />
-          </Button>
+          {showClose ? (
+            <Button aria-label="收起详情栏" onClick={onClose} size="icon" type="button" variant="ghost">
+              <PanelRightClose />
+            </Button>
+          ) : null}
         </div>
         <div className={styles.emptyDetail}>
           <Sparkles />
@@ -1443,9 +1684,11 @@ function DetailPanel({
           </div>
           <span>{formatEventDate(event)}</span>
         </div>
-        <Button aria-label="收起详情栏" onClick={onClose} size="icon" type="button" variant="ghost">
-          <PanelRightClose />
-        </Button>
+        {showClose ? (
+          <Button aria-label="收起详情栏" onClick={onClose} size="icon" type="button" variant="ghost">
+            <PanelRightClose />
+          </Button>
+        ) : null}
       </div>
       <div className={styles.detailScroll}>
         <h2>{event.title}</h2>
@@ -1615,6 +1858,25 @@ function renderBracketedEmphasis(text: string): ReactNode {
   return nodes.length > 0 ? nodes : text;
 }
 
+function countEventsByDate(events: ArchiveCalendarEvent[]): Map<string, number> {
+  const counts = new Map<string, number>();
+
+  events.forEach((event) => {
+    const key = dateKey(event.start);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  });
+
+  return counts;
+}
+
+function getHeatmapLevel(count: number, maxCount: number): number {
+  if (count <= 0 || maxCount <= 0) {
+    return 0;
+  }
+
+  return Math.min(4, Math.max(1, Math.ceil((count / maxCount) * 4)));
+}
+
 function buildMonthDays(currentDate: Date): Date[] {
   const first = startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 });
   const last = endOfWeek(endOfMonth(currentDate), { weekStartsOn: 1 });
@@ -1717,6 +1979,27 @@ function getLatestEventDate(events: ArchiveCalendarEvent[]): Date {
   );
 
   return latestTime ? startOfDay(new Date(latestTime)) : startOfDay(new Date());
+}
+
+function getVisibleMonthEventLimit(rowHeight: number, eventCount: number): number {
+  if (rowHeight <= 0) {
+    return eventCount;
+  }
+
+  const availableHeight = Math.max(0, rowHeight - monthCellChromeHeight);
+  const eventsOnlyLimit = Math.max(
+    0,
+    Math.floor((availableHeight + monthCompactEventGap) / (monthCompactEventHeight + monthCompactEventGap)),
+  );
+
+  if (eventCount <= eventsOnlyLimit) {
+    return eventCount;
+  }
+
+  return Math.max(
+    0,
+    Math.floor((availableHeight - monthCompactEventHeight) / (monthCompactEventHeight + monthCompactEventGap)),
+  );
 }
 
 function compareEventsAscending(first: ArchiveCalendarEvent, second: ArchiveCalendarEvent): number {
@@ -1936,6 +2219,38 @@ function buildBufferedTimelineDays(days: Date[], bufferDays: number): Date[] {
   }
 
   return rows;
+}
+
+function getAvailableMobileDayDates(events: ArchiveCalendarEvent[]): Date[] {
+  const daysByKey = new Map<string, Date>();
+
+  events.forEach((event) => {
+    const day = startOfDay(event.start);
+    daysByKey.set(dateKey(day), day);
+  });
+
+  return Array.from(daysByKey.values()).sort(
+    (first, second) => first.getTime() - second.getTime(),
+  );
+}
+
+function selectAdjacentMobileDay(
+  availableDays: Date[],
+  dayDate: Date | null,
+  direction: -1 | 1,
+): Date | null {
+  if (!dayDate) {
+    return null;
+  }
+
+  const selectedDayKey = dateKey(dayDate);
+  const selectedIndex = availableDays.findIndex((day) => dateKey(day) === selectedDayKey);
+
+  if (selectedIndex === -1) {
+    return null;
+  }
+
+  return availableDays[selectedIndex + direction] ?? null;
 }
 
 function dateKey(date: Date): string {
