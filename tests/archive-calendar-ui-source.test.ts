@@ -114,6 +114,8 @@ describe("archive calendar UI layout contract", () => {
   it("keeps the main toolbar split into left title controls and right actions", () => {
     const toolbar = getFunctionSource("CalendarToolbar");
     const toolbarStyles = getStyleBlock(".toolbar");
+    const compactToolbarStyles = getStyleBlock(".toolbar", 1);
+    const toolbarRightControls = getStyleBlock(".toolbarRightControls");
     const toolbarCenter = getStyleBlock(".toolbarCenter");
     const toolbarTitle = getStyleBlock(".toolbarTitle");
     const toolbarTitleMeta = getStyleBlock(".toolbarTitleMeta");
@@ -137,16 +139,70 @@ describe("archive calendar UI layout contract", () => {
     expect(viewTabs).toContain('aria-label="切换日历视图"');
     expect(viewTabs).not.toContain("<DropdownMenu>");
     expect(viewTabs).not.toContain("<select");
+    expect(calendarSource).toContain('{ value: "calendar", label: "日历" }');
+    expect(calendarSource).toContain('{ value: "relationships", label: "关系" }');
+    expect(calendarSource).not.toContain('{ value: "heatmap", label: "热力图" }');
+    expect(calendarSource).not.toContain('{ value: "day", label: "日" }');
+    expect(calendarSource).not.toContain('{ value: "week", label: "周" }');
+    expect(calendarSource).not.toContain('{ value: "month", label: "月" }');
+    expect(calendarSource).toContain("<RelationshipViewPlaceholder />");
+    expect(calendarSource).not.toContain("<HeatmapView");
     expect(toolbarStyles).toContain("grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr)");
+    expect(compactToolbarStyles).toContain("grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr)");
+    expect(compactToolbarStyles).not.toContain("grid-template-columns: 1fr");
+    expect(toolbarRightControls).toContain("flex-wrap: nowrap");
     expect(toolbarCenter).toContain("justify-self: center");
     expect(toolbarTitle).toContain("display: flex");
     expect(toolbarTitle).toContain("flex-direction: column");
     expect(toolbarTitleMeta).toContain("font-size: 0.76rem");
     expect(toolbarTitleMeta).toContain("color: var(--muted-foreground)");
-    expect(viewTabsStyles).toContain("grid-template-columns: repeat(3, minmax(0, 1fr))");
+    expect(viewTabsStyles).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
     expect(viewTabsStyles).toContain("background: var(--secondary)");
     expect(activeViewTabStyles).toContain("background: color-mix(in srgb, var(--background) 82%, var(--card))");
     expect(activeViewTabStyles).toContain("color: var(--foreground)");
+  });
+
+  it("integrates heat intensity into the sidebar mini calendar", () => {
+    const miniDatePicker = getFunctionSource("MiniDatePicker");
+    const miniGridStyles = getStyleBlock(".miniGrid");
+    const miniDayLevelOneStyles = getStyleBlock('.miniDay[data-heat-level="1"]');
+    const miniDayLevelFourStyles = getStyleBlock('.miniDay[data-heat-level="4"]');
+
+    expect(calendarSource).not.toContain("function HeatmapView");
+    expect(calendarSource).not.toContain("function HeatmapYearPanel");
+    expect(calendarSource).not.toContain("function HeatmapLegend");
+    expect(calendarSource).not.toContain("buildHeatmapYearDays");
+    expect(calendarSource).not.toContain("buildHeatmapYearMonthMarkers");
+    expect(calendarSource).not.toContain("getHeatmapReferenceDate");
+    expect(calendarSource).not.toContain("heatmapYearCellSize");
+    expect(calendarSource).not.toContain("heatmapYearCellGap");
+    expect(calendarSource).not.toContain("HeatmapYearDay");
+    expect(calendarSource).not.toContain("HeatmapYearMonthMarker");
+    expect(calendarSource).not.toContain("const isHeatmapWorkspace");
+    expect(calendarSource).not.toContain("rightOpen={isHeatmapWorkspace ? true : rightOpen}");
+    expect(calendarSource).not.toContain("rightOpen && !isHeatmapWorkspace");
+    expect(calendarStyles).not.toContain(".heatmapView");
+    expect(calendarStyles).not.toContain(".heatmapPanel");
+    expect(calendarStyles).not.toContain(".heatmapYearScroller");
+
+    expect(miniDatePicker).toContain("countEventsByDate(events)");
+    expect(miniDatePicker).toContain("const maxMiniDayEventCount = Math.max");
+    expect(miniDatePicker).toContain("const eventCount = eventCountsByDay.get(key) ?? 0");
+    expect(miniDatePicker).toContain("const heatLevel = getHeatmapLevel(eventCount, maxMiniDayEventCount)");
+    expect(miniDatePicker).toContain('data-heat-level={heatLevel}');
+    expect(miniDatePicker).toContain('title={`${format(day, "M月d日")} · ${eventCount} 条`}');
+    expect(miniDatePicker).not.toContain("styles.hasMiniEvent");
+    expect(calendarStyles).not.toContain(".hasMiniEvent::after");
+
+    expect(miniGridStyles).toContain("--mini-heat-1");
+    expect(miniGridStyles).toContain("--mini-heat-4");
+    expect(miniGridStyles).toContain("#6fd48b");
+    expect(miniGridStyles).toContain("#4fc878");
+    expect(miniGridStyles).toContain("--mini-heat-4: color-mix(in srgb, #4fc878 56%, var(--mini-heat-empty))");
+    expect(miniGridStyles).not.toContain("--mini-heat-4: #4fc878;");
+    expect(miniGridStyles).not.toContain("var(--primary)");
+    expect(miniDayLevelOneStyles).toContain("background: var(--mini-heat-1)");
+    expect(miniDayLevelFourStyles).toContain("background: var(--mini-heat-4)");
   });
 
   it("renders clear filters with the same secondary button style as Today", () => {
@@ -308,9 +364,12 @@ describe("archive calendar UI layout contract", () => {
 
     expect(appSource).toContain("onSelectDate={selectDayEvents}");
     expect(miniDatePicker).toContain("onSelectDate");
+    expect(miniDatePicker).toContain("selectOnlyEventDays = false");
     expect(miniDatePicker).not.toContain("styles.selectedMiniDay");
     expect(miniDayButton).toContain("onSelectDate(day)");
-    expect(miniDayButton).toContain('aria-label={`在详情栏查看 ${format(day, "M月d日")} 当天事件`}');
+    expect(miniDayButton).toContain('`在详情栏查看 ${format(day, "M月d日")} 当天事件`');
+    expect(miniDayButton).toContain('`${format(day, "M月d日")} 暂无日报`');
+    expect(miniDayButton).toContain("disabled={disabled}");
     expect(miniDayButton).not.toContain("aria-pressed=");
     expect(miniDayButton).toContain("<button");
     expect(miniDayButton).not.toContain("<span");
@@ -340,6 +399,9 @@ describe("archive calendar UI layout contract", () => {
     const summaryStyles = getStyleBlock(".reportOverview");
     const highlightsStyles = getStyleBlock(".reportHighlights");
     const highlightRowStyles = getStyleBlock(".reportHighlightRow");
+    const summaryBodyStyles = getStyleBlock(".reportSummary p");
+    const highlightNameStyles = getStyleBlock(".reportHighlightRow strong");
+    const highlightDescStyles = getStyleBlock(".reportHighlightRow p");
 
     expect(detailPanel.indexOf("ArchiveDayReportOverview")).toBeLessThan(
       detailPanel.indexOf("styles.detailDayEvents"),
@@ -354,8 +416,81 @@ describe("archive calendar UI layout contract", () => {
     expect(reportOverview).toContain("highlight.desc");
     expect(summaryStyles).toContain("display: grid");
     expect(getStyleBlock(".reportSummary,\n.reportHighlights")).toContain("border: 1px solid var(--border)");
+    expect(summaryBodyStyles).toContain("overflow-wrap: anywhere");
+    expect(summaryBodyStyles).not.toContain("-webkit-line-clamp");
+    expect(summaryBodyStyles).not.toContain("overflow: hidden");
     expect(highlightsStyles).toContain("display: grid");
     expect(highlightRowStyles).toContain("grid-template-columns: auto minmax(0, 1fr)");
+    expect(highlightNameStyles).toContain("overflow-wrap: anywhere");
+    expect(highlightNameStyles).not.toContain("text-overflow: ellipsis");
+    expect(highlightNameStyles).not.toContain("white-space: nowrap");
+    expect(highlightDescStyles).toContain("overflow-wrap: anywhere");
+    expect(highlightDescStyles).not.toContain("-webkit-line-clamp");
+    expect(highlightDescStyles).not.toContain("overflow: hidden");
+  });
+
+  it("renders a mobile-first daily reader with data-day navigation", () => {
+    const appSource = getFunctionSource("ArchiveCalendar");
+    const mobileNavigator = getFunctionSource("MobileDailyNavigator");
+    const mobilePane = getStyleBlock(".mobileDailyPane");
+    const mobileNav = getStyleBlock(".mobileDailyNav");
+    const mobileNavCenter = getStyleBlock(".mobileDailyNavCenter");
+    const mobileNavTitle = getStyleBlock(".mobileDailyNavTitle");
+    const mobileCalendarPopover = getStyleBlock(".mobileCalendarPopover");
+    const mobileCalendarSection = getStyleBlock(".mobileCalendarPopover .sidebarSection");
+    const mobilePanel = getStyleBlock(".mobileDailyPanel");
+    const mobileDetailHeader = getStyleBlock(".mobileDailyPanel .detailHeader");
+    const mobileDetailScroll = getStyleBlock(".mobileDailyPanel .detailScroll");
+
+    expect(appSource).toContain("getDefaultMobileDayDate");
+    expect(appSource).toContain("const [mobileDayDate, setMobileDayDate] = useState<Date | null>");
+    expect(appSource).toContain("const [mobileCalendarOpen, setMobileCalendarOpen] = useState(false)");
+    expect(appSource).toContain("const [mobileMonthDisplayDate, setMobileMonthDisplayDate]");
+    expect(appSource).toContain("const resolvedMobileDayDate =");
+    expect(appSource).toContain("const mobileDayEvents = useMemo");
+    expect(appSource).toContain("const mobileDayReportOverviews = resolvedMobileDayDate");
+    expect(appSource).toContain("<section className={styles.mobileDailyPane}");
+    expect(appSource).toContain("<MobileDailyNavigator");
+    expect(appSource).toContain("calendarOpen={mobileCalendarOpen}");
+    expect(appSource).toContain("monthDisplayDate={mobileMonthDisplayDate}");
+    expect(appSource).toContain("onSelectDate={selectMobileDay}");
+    expect(appSource).toContain("const toggleMobileCalendar = useCallback");
+    expect(appSource).toContain("setMobileMonthDisplayDate(startOfMonth(resolvedMobileDayDate))");
+    expect(appSource).toContain("onToggleCalendar={toggleMobileCalendar}");
+    expect(appSource).toContain("setMobileCalendarOpen(false)");
+    expect(appSource).toContain("showClose={false}");
+    expect(appSource).toContain("dayDate={mobileSelectedEvent ? null : resolvedMobileDayDate}");
+
+    expect(mobileNavigator).toContain("getAvailableMobileDayDates(events)");
+    expect(mobileNavigator).toContain("selectAdjacentMobileDay");
+    expect(mobileNavigator).toContain("<MiniDatePicker");
+    expect(mobileNavigator).toContain("selectOnlyEventDays");
+    expect(mobileNavigator).toContain('aria-label="打开日报日期日历"');
+    expect(mobileNavigator).toContain('aria-expanded={calendarOpen}');
+    expect(mobileNavigator).toContain('aria-label="移动端日报日期日历"');
+    expect(mobileNavigator).toContain('aria-label="上一篇日报"');
+    expect(mobileNavigator).toContain('aria-label="下一篇日报"');
+    expect(mobileNavigator).toContain("奇奇怪怪养龙虾群日报");
+    expect(mobileNavigator).toContain('format(dayDate, "M 月 d 日 EEEE"');
+    expect(mobileNavigator).not.toContain("天有数据");
+    expect(mobileNavigator).not.toContain("没有可显示的数据");
+
+    expect(mobilePane).toContain("display: none");
+    expect(mobileNav).toContain("display: grid");
+    expect(mobileNav).toContain("position: relative");
+    expect(mobileNav).toContain("grid-template-columns: 2.5rem minmax(0, 1fr) 2.5rem");
+    expect(mobileNavCenter).toContain("position: relative");
+    expect(mobileNavTitle).toContain("text-align: center");
+    expect(mobileCalendarPopover).toContain("position: absolute");
+    expect(mobileCalendarPopover).toContain("background: #111111");
+    expect(mobileCalendarSection).toContain("padding: 0");
+    expect(calendarStyles).not.toContain(".mobileDailyNavTitle em");
+    expect(mobilePanel).toContain("min-height: 0");
+    expect(mobileDetailHeader).toContain("background: #111111");
+    expect(mobileDetailScroll).toContain("background: #111111");
+    expect(calendarStyles).toContain(".mobileDailyPanel .detailPanel");
+    expect(calendarStyles).toContain(".leftSidebarFrame,\n  .calendarPane,\n  .rightSidebar");
+    expect(calendarStyles).toContain("display: none");
   });
 
   it("combines people and topic filters behind a sidebar tab switcher", () => {
@@ -388,6 +523,24 @@ describe("archive calendar UI layout contract", () => {
     expect(peopleList).toContain("height: 100%");
     expect(peopleList).not.toContain("max-height: 34vh");
     expect(sidebarFooter).not.toContain("margin-top: auto");
+  });
+
+  it("uses low-contrast modern scrollbars on archive scroll regions", () => {
+    const scrollSurface = getStyleBlock(".peopleList,\n.topicList,\n.timelineView,\n.detailScroll");
+    const scrollbar = getStyleBlock(".peopleList::-webkit-scrollbar,\n.topicList::-webkit-scrollbar,\n.timelineView::-webkit-scrollbar,\n.detailScroll::-webkit-scrollbar");
+    const scrollbarThumb = getStyleBlock(".peopleList::-webkit-scrollbar-thumb,\n.topicList::-webkit-scrollbar-thumb,\n.timelineView::-webkit-scrollbar-thumb,\n.detailScroll::-webkit-scrollbar-thumb");
+    const scrollbarThumbHover = getStyleBlock(".peopleList:hover::-webkit-scrollbar-thumb,\n.topicList:hover::-webkit-scrollbar-thumb,\n.timelineView:hover::-webkit-scrollbar-thumb,\n.detailScroll:hover::-webkit-scrollbar-thumb");
+
+    expect(scrollSurface).toContain("scrollbar-width: thin");
+    expect(scrollSurface).toContain("scrollbar-color: color-mix(in srgb, var(--foreground) 22%, transparent) transparent");
+    expect(scrollSurface).toContain("scrollbar-gutter: stable");
+    expect(scrollbar).toContain("width: 10px");
+    expect(scrollbar).toContain("height: 10px");
+    expect(scrollbarThumb).toContain("border: 3px solid transparent");
+    expect(scrollbarThumb).toContain("border-radius: 999px");
+    expect(scrollbarThumb).toContain("background-clip: content-box");
+    expect(scrollbarThumb).toContain("background: color-mix(in srgb, var(--foreground) 18%, transparent)");
+    expect(scrollbarThumbHover).toContain("background: color-mix(in srgb, var(--foreground) 32%, transparent)");
   });
 
   it("hides the native search clear control beside the custom clear button", () => {
@@ -568,20 +721,31 @@ describe("archive calendar UI layout contract", () => {
     expect(monthView).not.toContain("rowHeight || 94");
   });
 
-  it("shows only three month events before the expandable overflow affordance", () => {
+  it("adapts month event density so the overflow affordance stays visible", () => {
     const appSource = getFunctionSource("ArchiveCalendar");
     const monthView = getFunctionSource("MonthView");
+    const visibleLimitHelper = getFunctionSource("getVisibleMonthEventLimit");
     const monthEvents = getStyleBlock(".monthEvents");
     const moreEvents = getStyleBlock(".moreEvents");
 
     expect(appSource).toContain("const selectDayEvents = useCallback");
     expect(appSource).toContain("setSelectedDayDate(selectedDate)");
     expect(appSource).toContain("onOpenDayEvents={selectDayEvents}");
-    expect(monthView).toContain("dayEvents.slice(0, 3)");
-    expect(monthView).toContain("dayEvents.length > 3");
+    expect(monthView).toContain("const visibleDayEventLimit = getVisibleMonthEventLimit(measuredRowHeight, dayEvents.length)");
+    expect(monthView).toContain("dayEvents.slice(0, visibleDayEventLimit)");
+    expect(monthView).not.toContain("dayEvents.slice(0, 3)");
+    expect(monthView).toContain("hiddenDayEventCount > 0");
+    expect(monthView).not.toContain("dayEvents.length > 3");
     expect(monthView).toContain("剩余 {hiddenDayEventCount} 条");
     expect(monthView).not.toContain("展开剩余 {hiddenDayEventCount} 条");
     expect(monthView).toContain("onOpenDayEvents(day)");
+    expect(visibleLimitHelper).toContain("monthCompactEventHeight");
+    expect(visibleLimitHelper).toContain("monthCellChromeHeight");
+    expect(calendarSource).not.toContain("monthMaxVisibleEvents");
+    expect(visibleLimitHelper).toContain("return eventCount");
+    expect(visibleLimitHelper).toContain("eventCount <= eventsOnlyLimit");
+    expect(visibleLimitHelper).toContain("availableHeight - monthCompactEventHeight");
+    expect(visibleLimitHelper).not.toContain("Math.min(monthMaxVisibleEvents");
     expect(monthEvents).toContain("display: grid");
     expect(moreEvents).toContain("cursor: pointer");
     expect(moreEvents).toContain("font-size: 0.6875rem");
@@ -879,9 +1043,16 @@ describe("archive calendar UI layout contract", () => {
     expect(appSource).toContain("onClick={clearSelectedEvent}");
   });
 
-  it("defaults the detail panel selection to the first event in the current view", () => {
+  it("defaults the detail panel to the latest data day event list on first entry", () => {
     const appSource = getFunctionSource("ArchiveCalendar");
 
+    expect(appSource).toContain("getLatestEventDayDate");
+    expect(appSource).toContain("const initialFilteredEvents = useMemo(");
+    expect(appSource).toContain("const initialSelectedDayDate = useMemo(");
+    expect(appSource).toContain("getLatestEventDayDate({ events: initialFilteredEvents })");
+    expect(appSource).toContain("const [selectedEventId, setSelectedEventId] = useState<string | null>(null);");
+    expect(appSource).toContain("const [selectedDayDate, setSelectedDayDate] = useState<Date | null>(() => initialSelectedDayDate);");
+    expect(appSource).toContain("event={selectedDayDate ? null : selectedEvent}");
     expect(appSource).toContain("const defaultSelectedEventId = useMemo(");
     expect(appSource).toContain("const resolvedSelectedEventId = getResolvedSelectedEventId({");
     expect(appSource).toContain("defaultSelectedEventId,");
@@ -890,6 +1061,7 @@ describe("archive calendar UI layout contract", () => {
     expect(appSource).toContain("filteredEvents.find((event) => event.id === resolvedSelectedEventId)");
     expect(appSource).toContain("resolveDefaultSelectedEventId({");
     expect(appSource).not.toContain("filteredEvents[0] ?? null");
+    expect(appSource).not.toContain("const [selectedDayDate, setSelectedDayDate] = useState<Date | null>(null);");
   });
 
   it("does not recompute the selected detail card while month scrolling changes the visible range", () => {

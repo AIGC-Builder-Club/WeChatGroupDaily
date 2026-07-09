@@ -8,6 +8,105 @@
   color: var(--foreground);
 }
 
+.mobileDailyPane {
+  display: none;
+}
+
+.mobileDailyNav {
+  position: relative;
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr) 2.5rem;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 64px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--background);
+  z-index: 20;
+}
+
+.mobileDailyNavButton {
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border-radius: 8px;
+  background: var(--secondary);
+  color: var(--foreground);
+}
+
+.mobileDailyNavCenter {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  justify-items: center;
+}
+
+.mobileDailyNavTitle {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  gap: 2px;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: center;
+}
+
+.mobileDailyNavTitle:hover {
+  background: color-mix(in srgb, var(--accent) 62%, transparent);
+}
+
+.mobileDailyNavTitle:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.mobileDailyNavTitle span {
+  color: var(--muted-foreground);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.mobileDailyNavTitle strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 1rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobileCalendarPopover {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  z-index: 40;
+  width: min(19rem, calc(100vw - 32px));
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #111111;
+  box-shadow: 0 18px 48px color-mix(in srgb, #000 42%, transparent);
+  transform: translateX(-50%);
+}
+
+.mobileCalendarPopover .sidebarSection {
+  padding: 0;
+  border-bottom: 0;
+}
+
+.mobileDailyPanel {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--context-panel);
+}
+
 .leftSidebarFrame {
   position: relative;
   height: 100%;
@@ -294,6 +393,11 @@
 }
 
 .miniGrid {
+  --mini-heat-empty: color-mix(in srgb, var(--foreground) 4%, transparent);
+  --mini-heat-1: color-mix(in srgb, #6fd48b 18%, var(--mini-heat-empty));
+  --mini-heat-2: color-mix(in srgb, #6fd48b 30%, var(--mini-heat-empty));
+  --mini-heat-3: color-mix(in srgb, #6fd48b 42%, var(--mini-heat-empty));
+  --mini-heat-4: color-mix(in srgb, #4fc878 56%, var(--mini-heat-empty));
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 3px;
@@ -318,6 +422,28 @@
   background: var(--accent);
 }
 
+.miniDay[data-heat-level="1"] {
+  background: var(--mini-heat-1);
+}
+
+.miniDay[data-heat-level="2"] {
+  background: var(--mini-heat-2);
+}
+
+.miniDay[data-heat-level="3"] {
+  background: var(--mini-heat-3);
+}
+
+.miniDay[data-heat-level="4"] {
+  background: var(--mini-heat-4);
+  color: var(--primary-foreground);
+}
+
+.miniDay[data-heat-level]:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
 .miniDay:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
@@ -334,22 +460,16 @@
 
 .todayMiniDay:hover {
   background: var(--primary);
+  color: var(--primary-foreground);
 }
 
-.hasMiniEvent::after {
-  position: absolute;
-  bottom: 4px;
-  left: 50%;
-  width: 4px;
-  height: 4px;
-  border-radius: 999px;
-  background: var(--primary);
-  content: "";
-  transform: translateX(-50%);
+.disabledMiniDay {
+  cursor: not-allowed;
+  opacity: 0.35;
 }
 
-.todayMiniDay.hasMiniEvent::after {
-  background: var(--primary-foreground);
+.disabledMiniDay:hover {
+  background: transparent;
 }
 
 .peopleList,
@@ -360,6 +480,56 @@
   max-height: none;
   overflow: auto;
   padding-right: 2px;
+}
+
+.peopleList,
+.topicList,
+.timelineView,
+.detailScroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--foreground) 22%, transparent) transparent;
+  scrollbar-gutter: stable;
+}
+
+.peopleList::-webkit-scrollbar,
+.topicList::-webkit-scrollbar,
+.timelineView::-webkit-scrollbar,
+.detailScroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.peopleList::-webkit-scrollbar-track,
+.topicList::-webkit-scrollbar-track,
+.timelineView::-webkit-scrollbar-track,
+.detailScroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.peopleList::-webkit-scrollbar-thumb,
+.topicList::-webkit-scrollbar-thumb,
+.timelineView::-webkit-scrollbar-thumb,
+.detailScroll::-webkit-scrollbar-thumb {
+  min-height: 36px;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--foreground) 18%, transparent);
+  background-clip: content-box;
+}
+
+.peopleList:hover::-webkit-scrollbar-thumb,
+.topicList:hover::-webkit-scrollbar-thumb,
+.timelineView:hover::-webkit-scrollbar-thumb,
+.detailScroll:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--foreground) 32%, transparent);
+  background-clip: content-box;
+}
+
+.peopleList::-webkit-scrollbar-corner,
+.topicList::-webkit-scrollbar-corner,
+.timelineView::-webkit-scrollbar-corner,
+.detailScroll::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .peopleList button,
@@ -496,7 +666,7 @@
   align-items: center;
   gap: 6px;
   min-width: 0;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .toolbarIconButton {
@@ -546,7 +716,7 @@
 .viewTabs {
   display: inline-grid;
   width: 8.5rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   padding: 3px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -563,6 +733,7 @@
   font-size: 0.82rem;
   font-weight: 700;
   line-height: 1;
+  white-space: nowrap;
   outline: 0;
   transition:
     background 160ms ease,
@@ -582,6 +753,33 @@
   background: color-mix(in srgb, var(--background) 82%, var(--card));
   color: var(--foreground);
   box-shadow: 0 1px 1px color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+.relationshipPlaceholder {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  place-items: center;
+  background: var(--calendar-month);
+}
+
+.relationshipPlaceholderContent {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 0.45rem;
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+}
+
+.relationshipPlaceholderContent svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.relationshipPlaceholderContent strong {
+  color: var(--foreground);
+  font-size: 1rem;
 }
 
 .searchBox {
@@ -1238,17 +1436,15 @@
   margin: 0;
   font-size: 0.98rem;
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .reportSummary p {
-  display: -webkit-box;
   margin: 0;
-  overflow: hidden;
   color: color-mix(in srgb, var(--foreground) 76%, transparent);
   font-size: 0.82rem;
   line-height: 1.55;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 4;
+  overflow-wrap: anywhere;
 }
 
 .reportHighlights > div {
@@ -1272,11 +1468,9 @@
 
 .reportHighlightRow strong {
   min-width: 0;
-  overflow: hidden;
   font-size: 0.82rem;
   line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .reportHighlightRow em {
@@ -1287,14 +1481,11 @@
 }
 
 .reportHighlightRow p {
-  display: -webkit-box;
   margin: 0;
-  overflow: hidden;
   color: color-mix(in srgb, var(--foreground) 70%, transparent);
   font-size: 0.76rem;
   line-height: 1.42;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
 }
 
 .detailDayEvent {
@@ -1505,96 +1696,79 @@
 
 @media (max-width: 1180px) {
   .toolbar {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 8px;
+    padding-inline: 8px;
   }
 
   .toolbarRight {
-    justify-self: stretch;
-    justify-content: flex-start;
+    justify-self: end;
+    justify-content: flex-end;
   }
 
   .toolbarRightControls {
-    width: 100%;
+    width: auto;
+  }
+
+  .viewTabs {
+    width: 8rem;
+  }
+
+  .toolbarNavButton {
+    width: 1.875rem;
+  }
+
+  .toolbarTodayButton {
+    min-width: 3.1rem;
+    padding-inline: 0.625rem;
   }
 }
 
 @media (max-width: 860px) {
   .appShell {
-    display: flex;
-    height: auto;
-    min-height: 100vh;
-    overflow: visible;
-    flex-direction: column;
+    display: block;
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden;
   }
 
-  .leftSidebarFrame {
-    width: 100%;
-    height: auto;
+  .mobileDailyPane {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    height: 100dvh;
+    min-height: 0;
+    background: var(--context-panel);
   }
 
-  .leftSidebarGap {
+  .leftSidebarFrame,
+  .calendarPane,
+  .rightSidebar {
     display: none;
   }
 
-  .leftSidebarFrame[data-state="collapsed"] {
-    display: none;
-  }
-
-  .leftSidebar {
-    position: static;
-    inset: auto;
-    transform: none;
-  }
-
-  .leftSidebar,
-  .rightSidebar,
-  .detailPanel {
+  .mobileDailyPanel .detailPanel {
     width: 100%;
-    height: auto;
+    height: 100%;
+    max-height: none;
   }
 
-  .sidebarClosed {
-    display: none;
+  .mobileDailyPanel .detailHeader {
+    min-height: 44px;
+    padding: 10px 16px 4px;
+    background: #111111;
   }
 
-  .calendarPane {
-    height: auto;
-    min-height: 78vh;
+  .mobileDailyPanel .detailScroll {
+    padding: 14px 16px 18px;
+    background: #111111;
   }
 
-  .calendarSurface {
-    height: auto;
-    overflow: visible;
+  .mobileDailyPanel .rawLink {
+    width: calc(100% - 24px);
+    margin: 8px 12px 12px;
   }
 
-  .toolbar {
-    gap: 10px;
-  }
-
-  .toolbarLeft,
-  .toolbarRight {
-    flex-wrap: wrap;
-  }
-
-  .searchBox {
-    width: 100%;
-  }
-
-  .monthGrid {
-    grid-auto-rows: minmax(118px, auto);
-  }
-
-  .weekView {
-    grid-template-columns: minmax(15rem, 1fr);
-  }
-
-  .agendaColumn {
-    min-height: auto;
-    border-right: 0;
-  }
-
-  .detailPanel {
-    max-height: 70vh;
-    border-top: 1px solid var(--border);
+  .mobileDailyPanel .detailSwitcher {
+    padding-top: 10px;
   }
 }
